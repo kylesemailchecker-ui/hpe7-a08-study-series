@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module 8 Assessment — Dynamic Segmentation</title>
+<style>
+  :root{
+    --bg:#0b0d0f; --panel:#12161a; --panel2:#161c21;
+    --green:#3ee08a; --amber:#f5c542; --red:#ef4d5e; --blue:#4fa8ff; --cyan:#3ee0d8;
+    --text:#dbe4ea; --dim:#7f8e98; --border:#232b32;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px; background:var(--bg); color:var(--text);
+    font-family:var(--mono); min-height:100vh;
+  }
+  .frame{
+    max-width:860px; margin:0 auto; background:var(--panel);
+    border:1px solid var(--border); border-radius:10px; overflow:hidden;
+    box-shadow:0 0 40px rgba(79,168,255,0.06);
+  }
+  .chassis{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; background:var(--panel2); border-bottom:1px solid var(--border);
+  }
+  .chassis h1{ font-size:15px; margin:0; letter-spacing:.5px; color:var(--text); font-weight:600;}
+  .chassis .sub{ color:var(--dim); font-size:11px; margin-top:3px;}
+  .tunnel{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim);}
+  .tunnel .icon{ width:22px; height:12px; border:2px solid var(--dim); border-radius:6px; position:relative; }
+  .tunnel .icon::before{ content:''; position:absolute; top:2px; left:3px; right:3px; height:4px; border-radius:2px; background:var(--dim); }
+  .tunnel .icon.up{ border-color:var(--green); }
+  .tunnel .icon.up::before{ background:var(--green); box-shadow:0 0 4px var(--green); }
+
+  .portbar{ display:flex; gap:3px; padding:10px 20px; background:var(--panel2); border-bottom:1px solid var(--border); flex-wrap:wrap;}
+  .port{ width:12px; height:12px; border-radius:2px; background:#1d262c; border:1px solid var(--border); }
+  .port.done-correct{ background:var(--green); box-shadow:0 0 5px var(--green);}
+  .port.done-wrong{ background:var(--red); box-shadow:0 0 5px var(--red);}
+  .port.current{ border-color:var(--amber); }
+
+  .body{ padding:22px 24px 26px; }
+  .status-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+  .status-row .qcount{ color:var(--dim); font-size:12px;}
+  .status-row .score{ font-size:12px; color:var(--green);}
+  .section-tag{
+    display:inline-block; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--bg); background:var(--blue); padding:2px 8px; border-radius:3px; margin-bottom:10px;
+  }
+  .section-tag.config{ background:var(--cyan); }
+  .qtext{ font-size:15px; line-height:1.5; margin:6px 0 18px; color:var(--text); }
+  .hint{ color:var(--dim); font-size:11px; margin-bottom:12px; }
+  .choices{ display:flex; flex-direction:column; gap:9px; margin-bottom:18px;}
+  .choice{
+    display:flex; gap:10px; align-items:flex-start; padding:11px 13px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:6px;
+    cursor:pointer; font-size:13.5px; line-height:1.4; transition:border-color .15s;
+  }
+  .choice:hover{ border-color:#3a4a52; }
+  .choice .mark{
+    flex:0 0 18px; height:18px; width:18px; border:1px solid var(--dim); border-radius:4px;
+    display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--dim); margin-top:1px;
+  }
+  .choice.selected .mark{ border-color:var(--amber); color:var(--amber); }
+  .choice.correct{ border-color:var(--green); background:rgba(62,224,138,0.08); }
+  .choice.correct .mark{ background:var(--green); border-color:var(--green); color:#06110a; }
+  .choice.incorrect{ border-color:var(--red); background:rgba(239,77,94,0.08); }
+  .choice.incorrect .mark{ background:var(--red); border-color:var(--red); color:#1a0608; }
+  .choice.disabled{ cursor:default; }
+
+  .rationale{
+    display:none; background:#0e1417; border:1px solid var(--border); border-left:3px solid var(--green);
+    padding:12px 14px; border-radius:4px; font-size:12.5px; color:var(--dim); line-height:1.5; margin-bottom:16px;
+  }
+  .rationale.show{ display:block; }
+  .rationale b{ color:var(--text); }
+
+  .controls{ display:flex; justify-content:space-between; gap:10px; }
+  button{
+    font-family:var(--mono); background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    padding:9px 16px; border-radius:5px; cursor:pointer; font-size:12.5px; letter-spacing:.3px;
+  }
+  button:hover:not(:disabled){ border-color:var(--green); color:var(--green); }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button.primary{ background:var(--green); color:#06110a; border-color:var(--green); font-weight:600;}
+  button.primary:hover{ opacity:.9; color:#06110a; }
+
+  .results{ text-align:center; padding:20px 0; }
+  .results .score-big{ font-size:44px; color:var(--green); margin:8px 0; }
+  .results .score-sub{ color:var(--dim); font-size:13px; margin-bottom:22px;}
+  .results .breakdown{ display:flex; justify-content:center; gap:26px; margin-bottom:26px; font-size:12px;}
+  .results .breakdown div span{ display:block; font-size:20px; margin-bottom:2px;}
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="chassis">
+    <div>
+      <h1>MODULE 8 — SELF-TEST CONSOLE</h1>
+      <div class="sub">Ch 12 Dynamic Segmentation &middot; VSG Segmentation Design — HPE7-A08 Switching Professional</div>
+    </div>
+    <div class="tunnel">
+      <div class="icon" id="tunnelIcon"></div>
+      <span id="tunnelLabel">TUNNEL: NOT ESTABLISHED</span>
+    </div>
+  </div>
+  <div class="portbar" id="portbar"></div>
+
+  <div class="body">
+    <div id="quizArea">
+      <div class="status-row">
+        <div class="qcount" id="qcount">QUESTION 1 / 26</div>
+        <div class="score" id="scoreLive">SCORE: 0 / 0</div>
+      </div>
+      <div class="section-tag" id="sectionTag">UBT FUNDAMENTALS</div>
+      <div class="qtext" id="qtext"></div>
+      <div class="hint" id="hint"></div>
+      <div class="choices" id="choices"></div>
+      <div class="rationale" id="rationale"></div>
+      <div class="controls">
+        <button id="btnPrev">&larr; PREV</button>
+        <div style="display:flex; gap:10px;">
+          <button id="btnCheck" class="primary">CHECK</button>
+          <button id="btnNext" disabled>NEXT &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsArea" class="results hidden">
+      <div class="sub" style="color:var(--dim); font-size:12px; letter-spacing:1px;">SESSION COMPLETE</div>
+      <div class="score-big" id="finalScore">0%</div>
+      <div class="score-sub" id="finalDetail">0 of 26 correct</div>
+      <div class="breakdown">
+        <div><span id="fundScore">0/14</span>UBT Fundamentals</div>
+        <div><span id="configScore">0/12</span>Config / HA / NetConductor</div>
+      </div>
+      <button class="primary" id="btnRestart">RESTART SESSION</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+{sec:"fund", q:"What two protocols does User-Based Tunneling use to encapsulate wireless-style traffic from a switch to a controller?", choices:["IPsec and TLS","GRE and VXLAN","MPLS and GRE","VXLAN and IPsec"], correct:[1], multi:false,
+ rationale:"GRE and VXLAN are the two confirmed tunneling mechanisms for UBT."},
+{sec:"fund", q:"How does a tunneled-node port's behavior compare to a controlled access point?", choices:["It behaves identically, tunneling 802.11 frames the same way an AP does","It stops forwarding traffic locally and tunnels 802.3 frames instead, the same general concept as an AP tunneling 802.11 frames","It only tunnels broadcast and multicast traffic, forwarding unicast locally","It requires a separate controller from any AP already in use"], correct:[1], multi:false,
+ rationale:"Tunneled-node stops local forwarding and tunnels 802.3 (Ethernet) frames, conceptually parallel to an AP tunneling 802.11 frames."},
+{sec:"fund", q:"Does GRE itself provide encryption for tunneled-node traffic?", choices:["Yes, GRE encrypts the full frame by default","No — GRE provides no encryption; the wired path is treated as trusted instead","Only when combined with 802.1X","Only for wireless-originated traffic"], correct:[1], multi:false,
+ rationale:"GRE provides no encryption; the wired infrastructure between switch and controller is treated as trusted."},
+{sec:"fund", q:"What port and protocol does the UBT control plane use?", choices:["TCP port 443","UDP port 8211 (PAPI)","UDP port 3799","TCP port 8211"], correct:[1], multi:false,
+ rationale:"PAPI over UDP port 8211 is the confirmed control-plane channel, same as AP-to-controller communication."},
+{sec:"fund", q:"Do AOS-CX switches support Control Plane Security (CPSec) for PAPI, the way access points do?", choices:["Yes, identically to APs","No — an optional MD5-based hash (Enhanced PAPI security) is used instead","Only on the CX 8360 Series","Only when RF Protect is licensed"], correct:[1], multi:false,
+ rationale:"AOS-CX switches do not support CPSec for PAPI; the confirmed alternative is the optional MD5-based Enhanced PAPI security."},
+{sec:"fund", q:"Is Enhanced PAPI security enabled by default?", choices:["Yes, by default on all zones","No — disabled by default, though source recommends always enabling it","Enabled only when a backup controller is configured","Enabled automatically once a zone is created"], correct:[1], multi:false,
+ rationale:"Enhanced PAPI security is disabled by default despite being explicitly recommended in source."},
+{sec:"fund", q:"What VLAN does the switch communicate to the controller via the GRE header's Key field?", choices:["VLAN 1, always","The transit (or reserved) VLAN — the untagged VLAN on the tunneled-node port","The management VLAN","Whatever VLAN is tagged highest-priority on the trunk"], correct:[1], multi:false,
+ rationale:"The transit/reserved VLAN — the port's untagged VLAN — is carried in the GRE header's Key field."},
+{sec:"fund", q:"What must never be applied between a tunneled-node switch and its controller?", choices:["Jumbo frames","NAT","A VRF instance","A backup controller path"], correct:[1], multi:false,
+ rationale:"NAT must not sit between switch and controller — the switch must reach the controller directly."},
+{sec:"fund", q:"Which two traffic types must be explicitly allowed through any firewall or ACL sitting between switch and controller? (select two)", choices:["GRE (IP protocol 47)","PAPI (UDP port 8211)","SNMP (UDP port 161)","NTP (UDP port 123)"], correct:[0,1], multi:true,
+ rationale:"GRE (IP protocol 47) and PAPI (UDP 8211) are the two confirmed required-allowed traffic types; SNMP and NTP are real protocols from elsewhere in source, reused here as distractors."},
+{sec:"fund", q:"Why does source recommend jumbo frames end-to-end between switch and controller?", choices:["Tunneled-node ports don't support fragmentation, Path MTU Discovery, or reassembly","GRE requires a minimum frame size of 9000 bytes","Jumbo frames are required for PAPI authentication","Jumbo frames reduce controller licensing consumption"], correct:[0], multi:false,
+ rationale:"Because tunneled-node ports can't fragment, use PMTUD, or reassemble oversized frames, jumbo frames end-to-end are the confirmed mitigation."},
+{sec:"fund", q:"What RADIUS attribute does the chapter confirm is used for VSA-Derived Role assignment under UBT?", choices:["Filter-Id","Aruba-User-Role, VSA ID 25","Tunnel-Private-Group-ID","Service-Type"], correct:[1], multi:false,
+ rationale:"Aruba-User-Role (VSA ID 25) is the confirmed chapter attribute for VSA-Derived Role assignment."},
+{sec:"fund", q:"What triggers the Critical role under UBT?", choices:["RADIUS explicitly rejects the device","RADIUS is unreachable during first authentication or reauthentication","The device successfully authenticates but receives no role","The connected device's supplicant times out"], correct:[1], multi:false,
+ rationale:"Critical role triggers specifically on RADIUS unreachability during authentication or reauthentication — the other options describe the Reject role, Auth-role, and Fallback role instead."},
+{sec:"fund", q:"What is unique about the Pre-authentication role setup for MAC-auth clients?", choices:["Voice and data traffic each get a dedicated pre-auth VLAN, and a pre-auth role VLAN cannot coexist with a pre-auth role on the same interface","It only applies to devices using 802.1X, never MAC-auth","It requires a Downloadable User Role from ClearPass","It is only available on the CX 6300 Series"], correct:[0], multi:false,
+ rationale:"Confirmed dual-VLAN detail, plus the mutual exclusivity between a pre-auth role VLAN and a pre-auth role on the same interface."},
+{sec:"fund", q:"What is Limited Auth-Survivability, and what is its cache limit?", choices:["The cached-critical role feature; caches an already-authenticated client's role if RADIUS becomes unreachable, up to 1024 entries switch-wide with FIFO replacement","A backup-controller failover feature with no entry limit","A feature that caches RADIUS server IP addresses, up to 256 entries","A feature exclusive to Downloadable User Roles, up to 512 entries"], correct:[0], multi:false,
+ rationale:"Confirmed cache limit of 1024 entries switch-wide with FIFO replacement for the cached-critical role feature."},
+
+{sec:"config", q:"What role parameter is new for UBT that did not appear among the confirmed 802.1X/MAC-auth role parameters?", choices:["Reauthentication period","Private-VLAN port type (promiscuous or secondary)","Inactivity-timeout","QoS trust-mode"], correct:[1], multi:false,
+ rationale:"Private-VLAN port type is the new UBT-specific parameter; the others are shared with Module 7's 802.1X/MAC-auth roles."},
+{sec:"config", q:"On AOS-CX 10.4, can a gateway (secondary) role be downloaded directly to the Mobility Controller?", choices:["Yes, automatically, the same as any Local User Role","No — the role must already exist on the controller, or the user must reauthenticate a second time","Yes, but only over a REST API connection","No, gateway roles are not supported on AOS-CX at all"], correct:[1], multi:false,
+ rationale:"Confirmed AOS-CX 10.4 limitation — the gateway/secondary role must pre-exist on the controller, or a second authentication is required."},
+{sec:"config", q:"Where is a Downloadable User Role (DUR) defined, and does it support third-party RADIUS servers?", choices:["Defined on the switch; supports any RADIUS server","Defined centrally on ClearPass; no third-party RADIUS server support exists","Defined on the Mobility Controller; supports any RADIUS server","Defined on ClearPass; supported by any RADIUS server with VSA extensions"], correct:[1], multi:false,
+ rationale:"DUR is defined centrally on ClearPass with no equivalent third-party RADIUS server option."},
+{sec:"config", q:"What happens if a DUR name sent by ClearPass doesn't match an existing local role reference on the switch?", choices:["The switch creates the role automatically","The client's status shows \"Not Ready\" instead of \"Applied\"","Authentication fails outright with no role assigned","The switch falls back to the transit VLAN"], correct:[1], multi:false,
+ rationale:"Confirmed troubleshooting behavior — a role-name mismatch produces a \"Not Ready\" status rather than \"Applied.\""},
+{sec:"config", q:"What is the confirmed security limitation of local switching (as opposed to UBT)?", choices:["It cannot support VoIP traffic at all","Filtering is limited to ACLs only, with no stateful or application-inspection capability","It requires a Mobility Controller to function","It cannot assign VLANs dynamically"], correct:[1], multi:false,
+ rationale:"Local switching's confirmed limitation is ACL-only filtering with no stateful or application-inspection capability."},
+{sec:"config", q:"Starting with which controller software version are UBT switches licensed as access points, and what license is additionally required if using the controller's firewall functionality? (select two)", choices:["AOS-8.4","A PEF (Policy Enforcement Firewall) license","AOS-10.13","An RF Protect license, regardless of RF Protect usage"], correct:[0,1], multi:true,
+ rationale:"AOS-8.4 is the confirmed starting version, and a PEF license is required for controller firewall use. AOS-10.13 is a real version number reused from the zone-limit fact as a distractor; RF Protect licensing only applies if RF Protect itself is enabled."},
+{sec:"config", q:"Is UBT licensing consumed per port or per switch?", choices:["Per port — each tunneled port consumes a separate license","Per switch — a 10-switch VSF stack consumes only one AP-equivalent license","Per VRF instance","Per zone"], correct:[1], multi:false,
+ rationale:"Licensing is consumed per switch, not per port — confirmed via the 10-switch VSF stack example."},
+{sec:"config", q:"What is the confirmed tunnel scalability for both the CX 6300 Series and CX 6400 Series?", choices:["500 tunnels per switch/stack; 128 per port","1000 tunnels per switch/stack; 256 per port","2000 tunnels per switch/stack; 512 per port","256 tunnels per switch/stack; 64 per port"], correct:[1], multi:false,
+ rationale:"1000 tunnels per switch/stack and 256 per port are confirmed for both the CX 6300 and CX 6400 Series."},
+{sec:"config", q:"What is the confirmed AOS-CX 10.13 limit on the number of zones per switch or stack?", choices:["4 zones","8 zones","16 zones","32 zones"], correct:[1], multi:false,
+ rationale:"8 zones per switch/stack is the confirmed AOS-CX 10.13 limit."},
+{sec:"config", q:"In UBT 2.0, where is VLAN configuration performed, and what user type is supported?", choices:["On the switch; both tagged and untagged users","On the gateway; untagged users only","On the switch; untagged users only","On the gateway; both tagged and untagged users"], correct:[1], multi:false,
+ rationale:"UBT 2.0 moves VLAN configuration to the gateway and supports only untagged users; option A describes UBT 1.0 instead."},
+{sec:"config", q:"How does an egress switch decide whether to forward or drop VXLAN-GBP traffic between two roles?", choices:["By comparing the destination IP address against an access control list","By comparing the source role (from the Group Policy ID) against the destination role (from the destination MAC address)","By checking whether both devices are on the same VLAN","By checking the controller's firewall session table"], correct:[1], multi:false,
+ rationale:"VXLAN-GBP forwarding is decided by comparing the source role (carried in the GPID) against the destination role, derived from the destination MAC address."},
+{sec:"config", q:"At what confirmed campus scale does the VSG state gateways are required?", choices:["More than 100 access points and 1,000 clients at a single site","More than 500 access points and 5,000 clients at a single site","More than 1,000 access points and 10,000 clients at a single site","Gateways are required regardless of scale"], correct:[1], multi:false,
+ rationale:"Confirmed VSG sizing guidance: gateways required beyond 500 access points and 5,000 clients at a single site."},
+];
+
+let idx = 0, checked = false, answers = new Array(QUESTIONS.length).fill(null);
+let results = new Array(QUESTIONS.length).fill(null);
+
+const qcount = document.getElementById('qcount');
+const scoreLive = document.getElementById('scoreLive');
+const sectionTag = document.getElementById('sectionTag');
+const qtext = document.getElementById('qtext');
+const hint = document.getElementById('hint');
+const choicesEl = document.getElementById('choices');
+const rationaleEl = document.getElementById('rationale');
+const btnPrev = document.getElementById('btnPrev');
+const btnCheck = document.getElementById('btnCheck');
+const btnNext = document.getElementById('btnNext');
+const portbar = document.getElementById('portbar');
+const tunnelIcon = document.getElementById('tunnelIcon');
+const tunnelLabel = document.getElementById('tunnelLabel');
+
+function buildPortbar(){
+  portbar.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const p = document.createElement('div');
+    p.className = 'port';
+    p.id = 'port-' + i;
+    portbar.appendChild(p);
+  });
+}
+buildPortbar();
+
+function refreshPortbar(){
+  QUESTIONS.forEach((_, i) => {
+    const p = document.getElementById('port-' + i);
+    p.className = 'port' + (i === idx ? ' current' : '') +
+      (results[i] === true ? ' done-correct' : results[i] === false ? ' done-wrong' : '');
+  });
+}
+
+function renderQuestion(){
+  checked = false;
+  const item = QUESTIONS[idx];
+  qcount.textContent = 'QUESTION ' + (idx+1) + ' / ' + QUESTIONS.length;
+  sectionTag.textContent = item.sec === 'fund' ? 'UBT FUNDAMENTALS — CH 12' : 'CONFIG / HA / NETCONDUCTOR — VSG';
+  sectionTag.className = 'section-tag' + (item.sec === 'config' ? ' config' : '');
+  qtext.textContent = item.q;
+  hint.textContent = item.multi ? 'Select all that apply, then press CHECK.' : 'Select one answer, then press CHECK.';
+  choicesEl.innerHTML = '';
+  const selected = answers[idx] || [];
+  item.choices.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'choice' + (selected.includes(i) ? ' selected' : '');
+    el.innerHTML = '<div class="mark">' + (selected.includes(i) ? '✓' : '') + '</div><div>' + c + '</div>';
+    el.onclick = () => {
+      if (checked) return;
+      let sel = answers[idx] || [];
+      if (item.multi) {
+        sel = sel.includes(i) ? sel.filter(x => x !== i) : [...sel, i];
+      } else {
+        sel = [i];
+      }
+      answers[idx] = sel;
+      renderQuestion();
+    };
+    choicesEl.appendChild(el);
+  });
+  rationaleEl.className = 'rationale';
+  rationaleEl.innerHTML = '';
+  btnCheck.disabled = !(answers[idx] && answers[idx].length);
+  btnNext.disabled = true;
+  btnPrev.disabled = idx === 0;
+  tunnelIcon.className = 'icon';
+  tunnelLabel.textContent = 'TUNNEL: NOT ESTABLISHED';
+  refreshPortbar();
+  updateScoreLive();
+}
+
+function isCorrect(item, sel){
+  if (!sel) return false;
+  const c = item.correct.slice().sort();
+  const s = sel.slice().sort();
+  return c.length === s.length && c.every((v,i) => v === s[i]);
+}
+
+function updateScoreLive(){
+  const answeredCount = results.filter(r => r !== null).length;
+  const correctCount = results.filter(r => r === true).length;
+  scoreLive.textContent = 'SCORE: ' + correctCount + ' / ' + answeredCount;
+}
+
+btnCheck.onclick = () => {
+  if (checked) return;
+  checked = true;
+  const item = QUESTIONS[idx];
+  const sel = answers[idx] || [];
+  const correct = isCorrect(item, sel);
+  results[idx] = correct;
+
+  Array.from(choicesEl.children).forEach((el, i) => {
+    el.classList.add('disabled');
+    if (item.correct.includes(i)) el.classList.add('correct');
+    else if (sel.includes(i)) el.classList.add('incorrect');
+  });
+
+  rationaleEl.innerHTML = '<b>' + (correct ? 'Correct.' : 'Not quite.') + '</b> ' + item.rationale;
+  rationaleEl.className = 'rationale show';
+  tunnelIcon.className = 'icon' + (correct ? ' up' : '');
+  tunnelLabel.textContent = correct ? 'TUNNEL: ESTABLISHED' : 'TUNNEL: NOT ESTABLISHED';
+
+  btnNext.disabled = false;
+  refreshPortbar();
+  updateScoreLive();
+};
+
+btnNext.onclick = () => {
+  if (idx < QUESTIONS.length - 1) {
+    idx++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+};
+
+btnPrev.onclick = () => {
+  if (idx > 0) {
+    idx--;
+    renderQuestion();
+  }
+};
+
+function showResults(){
+  document.getElementById('quizArea').classList.add('hidden');
+  document.getElementById('resultsArea').classList.remove('hidden');
+  const total = QUESTIONS.length;
+  const correct = results.filter(r => r === true).length;
+  const pct = Math.round((correct/total)*100);
+  document.getElementById('finalScore').textContent = pct + '%';
+  document.getElementById('finalDetail').textContent = correct + ' of ' + total + ' correct';
+  const fundTotal = QUESTIONS.filter(q => q.sec === 'fund').length;
+  const configTotal = QUESTIONS.filter(q => q.sec === 'config').length;
+  let fundCorrect = 0, configCorrect = 0;
+  QUESTIONS.forEach((q, i) => {
+    if (results[i] === true) { if (q.sec === 'fund') fundCorrect++; else configCorrect++; }
+  });
+  document.getElementById('fundScore').textContent = fundCorrect + '/' + fundTotal;
+  document.getElementById('configScore').textContent = configCorrect + '/' + configTotal;
+}
+
+document.getElementById('btnRestart').onclick = () => {
+  idx = 0; checked = false;
+  answers = new Array(QUESTIONS.length).fill(null);
+  results = new Array(QUESTIONS.length).fill(null);
+  document.getElementById('resultsArea').classList.add('hidden');
+  document.getElementById('quizArea').classList.remove('hidden');
+  renderQuestion();
+};
+
+renderQuestion();
+</script>
+</body>
+</html>

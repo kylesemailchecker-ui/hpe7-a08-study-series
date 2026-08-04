@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module 7 Assessment — 802.1X &amp; MAC Authentication</title>
+<style>
+  :root{
+    --bg:#0b0d0f; --panel:#12161a; --panel2:#161c21;
+    --green:#3ee08a; --amber:#f5c542; --red:#ef4d5e; --blue:#4fa8ff;
+    --text:#dbe4ea; --dim:#7f8e98; --border:#232b32;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px; background:var(--bg); color:var(--text);
+    font-family:var(--mono); min-height:100vh;
+  }
+  .frame{
+    max-width:860px; margin:0 auto; background:var(--panel);
+    border:1px solid var(--border); border-radius:10px; overflow:hidden;
+    box-shadow:0 0 40px rgba(62,224,138,0.05);
+  }
+  .chassis{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; background:var(--panel2); border-bottom:1px solid var(--border);
+  }
+  .chassis h1{ font-size:15px; margin:0; letter-spacing:.5px; color:var(--text); font-weight:600;}
+  .chassis .sub{ color:var(--dim); font-size:11px; margin-top:3px;}
+  .lock{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim);}
+  .lock .icon{ width:16px; height:16px; border:2px solid var(--dim); border-radius:3px; position:relative;}
+  .lock .icon.open{ border-color:var(--green); }
+  .lock .icon::before{ content:''; position:absolute; top:-8px; left:2px; width:8px; height:8px; border:2px solid var(--dim); border-bottom:none; border-radius:4px 4px 0 0;}
+  .lock .icon.open::before{ border-color:var(--green); transform:rotate(-25deg) translateX(-2px); }
+
+  .portbar{ display:flex; gap:3px; padding:10px 20px; background:var(--panel2); border-bottom:1px solid var(--border); flex-wrap:wrap;}
+  .port{ width:12px; height:12px; border-radius:2px; background:#1d262c; border:1px solid var(--border); }
+  .port.done-correct{ background:var(--green); box-shadow:0 0 5px var(--green);}
+  .port.done-wrong{ background:var(--red); box-shadow:0 0 5px var(--red);}
+  .port.current{ border-color:var(--amber); }
+
+  .body{ padding:22px 24px 26px; }
+  .status-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+  .status-row .qcount{ color:var(--dim); font-size:12px;}
+  .status-row .score{ font-size:12px; color:var(--green);}
+  .section-tag{
+    display:inline-block; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--bg); background:var(--blue); padding:2px 8px; border-radius:3px; margin-bottom:10px;
+  }
+  .section-tag.macauth{ background:var(--amber); }
+  .qtext{ font-size:15px; line-height:1.5; margin:6px 0 18px; color:var(--text); }
+  .hint{ color:var(--dim); font-size:11px; margin-bottom:12px; }
+  .choices{ display:flex; flex-direction:column; gap:9px; margin-bottom:18px;}
+  .choice{
+    display:flex; gap:10px; align-items:flex-start; padding:11px 13px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:6px;
+    cursor:pointer; font-size:13.5px; line-height:1.4; transition:border-color .15s;
+  }
+  .choice:hover{ border-color:#3a4a52; }
+  .choice .mark{
+    flex:0 0 18px; height:18px; width:18px; border:1px solid var(--dim); border-radius:4px;
+    display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--dim); margin-top:1px;
+  }
+  .choice.selected .mark{ border-color:var(--amber); color:var(--amber); }
+  .choice.correct{ border-color:var(--green); background:rgba(62,224,138,0.08); }
+  .choice.correct .mark{ background:var(--green); border-color:var(--green); color:#06110a; }
+  .choice.incorrect{ border-color:var(--red); background:rgba(239,77,94,0.08); }
+  .choice.incorrect .mark{ background:var(--red); border-color:var(--red); color:#1a0608; }
+  .choice.disabled{ cursor:default; }
+
+  .rationale{
+    display:none; background:#0e1417; border:1px solid var(--border); border-left:3px solid var(--green);
+    padding:12px 14px; border-radius:4px; font-size:12.5px; color:var(--dim); line-height:1.5; margin-bottom:16px;
+  }
+  .rationale.show{ display:block; }
+  .rationale b{ color:var(--text); }
+
+  .controls{ display:flex; justify-content:space-between; gap:10px; }
+  button{
+    font-family:var(--mono); background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    padding:9px 16px; border-radius:5px; cursor:pointer; font-size:12.5px; letter-spacing:.3px;
+  }
+  button:hover:not(:disabled){ border-color:var(--green); color:var(--green); }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button.primary{ background:var(--green); color:#06110a; border-color:var(--green); font-weight:600;}
+  button.primary:hover{ opacity:.9; color:#06110a; }
+
+  .results{ text-align:center; padding:20px 0; }
+  .results .score-big{ font-size:44px; color:var(--green); margin:8px 0; }
+  .results .score-sub{ color:var(--dim); font-size:13px; margin-bottom:22px;}
+  .results .breakdown{ display:flex; justify-content:center; gap:26px; margin-bottom:26px; font-size:12px;}
+  .results .breakdown div span{ display:block; font-size:20px; margin-bottom:2px;}
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="chassis">
+    <div>
+      <h1>MODULE 7 — SELF-TEST CONSOLE</h1>
+      <div class="sub">Ch 10 802.1X &middot; Ch 11 MAC Authentication — HPE7-A08 Switching Professional</div>
+    </div>
+    <div class="lock">
+      <div class="icon" id="lockIcon"></div>
+      <span id="lockLabel">PORT: UNAUTHORIZED</span>
+    </div>
+  </div>
+  <div class="portbar" id="portbar"></div>
+
+  <div class="body">
+    <div id="quizArea">
+      <div class="status-row">
+        <div class="qcount" id="qcount">QUESTION 1 / 28</div>
+        <div class="score" id="scoreLive">SCORE: 0 / 0</div>
+      </div>
+      <div class="section-tag" id="sectionTag">802.1X</div>
+      <div class="qtext" id="qtext"></div>
+      <div class="hint" id="hint"></div>
+      <div class="choices" id="choices"></div>
+      <div class="rationale" id="rationale"></div>
+      <div class="controls">
+        <button id="btnPrev">&larr; PREV</button>
+        <div style="display:flex; gap:10px;">
+          <button id="btnCheck" class="primary">CHECK</button>
+          <button id="btnNext" disabled>NEXT &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsArea" class="results hidden">
+      <div class="sub" style="color:var(--dim); font-size:12px; letter-spacing:1px;">SESSION COMPLETE</div>
+      <div class="score-big" id="finalScore">0%</div>
+      <div class="score-sub" id="finalDetail">0 of 28 correct</div>
+      <div class="breakdown">
+        <div><span id="dot1xScore">0/17</span>802.1X (Ch 10)</div>
+        <div><span id="macauthScore">0/11</span>MAC-Auth/MACsec (Ch 11)</div>
+      </div>
+      <button class="primary" id="btnRestart">RESTART SESSION</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+{sec:"dot1x", q:"What are the three 802.1X device roles?", choices:["Client, Server, Gateway","Supplicant, Authenticator, Authentication Server","Requester, Validator, Enforcer","Endpoint, NAS, Directory"], correct:[1], multi:false,
+ rationale:"The Supplicant, Authenticator, and Authentication Server are the three confirmed 802.1X roles."},
+{sec:"dot1x", q:"At what layer does 802.1X operate, relative to IP addressing?", choices:["Layer 3 — after an IP address is assigned","Layer 2 — before an IP address is assigned","Layer 4 — during the TCP handshake","Layer 7 — during the application session"], correct:[1], multi:false,
+ rationale:"802.1X operates at Layer 2, before any IP address is assigned to the device."},
+{sec:"dot1x", q:"Which EAP method is described as the most secure, using mutual certificate-based authentication?", choices:["EAP-TTLS","PEAP with MS-CHAPv2","EAP-TLS","EAP-MD5"], correct:[2], multi:false,
+ rationale:"EAP-TLS provides mutual authentication via digital certificates on both sides — the most secure confirmed method."},
+{sec:"dot1x", q:"Does 802.1X encrypt the data path on a wired Ethernet connection the same way it does on wireless?", choices:["Yes, identically on both","No — on Ethernet, the client and switch port do not encrypt traffic this way","Only if EAP-TLS is used","Only if a captive portal is also configured"], correct:[1], multi:false,
+ rationale:"This is exactly the gap MACsec exists to close on wired links."},
+{sec:"dot1x", q:"What traffic is permitted on an 802.1X uncontrolled port before authentication succeeds?", choices:["All traffic except broadcast","DHCP and DNS only","Only EAP/EAPoL traffic","Any traffic tagged with the native VLAN"], correct:[2], multi:false,
+ rationale:"The uncontrolled port only ever allows EAP/EAPoL traffic prior to successful authentication."},
+{sec:"dot1x", q:"What are the default RADIUS UDP ports for authentication/authorization and accounting?", choices:["1645 and 1646","1812 and 1813","3799 and 1812","1813 and 1812"], correct:[1], multi:false,
+ rationale:"1812 (auth/authz) and 1813 (accounting) are the confirmed defaults; 3799 is the CoA/DM port, reused as a distractor."},
+{sec:"dot1x", q:"If both a global RADIUS key and an individual host key are configured, which one applies?", choices:["The global key always applies","The individual host key overrides the global key","Whichever was configured most recently","Both must match or authentication fails"], correct:[1], multi:false,
+ rationale:"The individual per-host key takes precedence over the global key."},
+{sec:"dot1x", q:"How many RADIUS servers can a single RADIUS group contain at most, and how many groups can a switch have?", choices:["3 servers per group; 28 groups per switch","5 servers per group; 10 groups per switch","2 servers per group; 16 groups per switch","Unlimited servers; 28 groups per switch"], correct:[0], multi:false,
+ rationale:"Confirmed exact limits: 3 servers per group, 28 groups per switch."},
+{sec:"dot1x", q:"By default, is the fail-through feature (trying the next RADIUS server after an explicit reject) enabled?", choices:["Yes, it's enabled by default","No, it's disabled by default","Only for MAC-auth, not 802.1X","Only when dynamic authorization is enabled"], correct:[1], multi:false,
+ rationale:"Fail-through is disabled by default and must be explicitly enabled."},
+{sec:"dot1x", q:"What is the default UDP port for Change of Authorization (CoA) and Disconnect Message (DM) traffic?", choices:["1812","1813","3799","1645"], correct:[2], multi:false,
+ rationale:"3799 is the confirmed CoA/DM default port; 1812/1813 are RADIUS auth/accounting ports, reused as distractors."},
+{sec:"dot1x", q:"Can the CoA/DM time-window check be disabled on AOS-CX, the way it could on older AOS-S switches?", choices:["Yes, with a single command","No — it cannot be disabled; NTP synchronization is the recommended workaround","Yes, but only if dynamic authorization is disabled","No, but the window can be set to 0 to effectively disable it"], correct:[1], multi:false,
+ rationale:"AOS-CX cannot disable this check at all — NTP is the confirmed recommended approach instead."},
+{sec:"dot1x", q:"Which two RADIUS Attribute-Value Pairs, sent together with Tunnel-Private-Group-ID, are used to dynamically assign a VLAN? (select two)", choices:["Tunnel-Medium-Type","Tunnel-Type","Filter-Id","Service-Type"], correct:[0,1], multi:true,
+ rationale:"Tunnel-Medium-Type (64), Tunnel-Type (65), and Tunnel-Private-Group-ID (81) work together to override the static VLAN."},
+{sec:"dot1x", q:"If a RADIUS server sends a VLAN name that doesn't exist on the switch, what happens?", choices:["The switch falls back to the port's statically configured VLAN","Authentication fails outright","The client is placed in VLAN 1 by default","The switch creates the VLAN automatically"], correct:[1], multi:false,
+ rationale:"A mismatched VLAN name/ID fails authentication outright — there is no fallback to the static VLAN."},
+{sec:"dot1x", q:"In device-based authentication mode, what is the confirmed security weakness?", choices:["It requires a certificate on every device","Unauthorized devices can \"piggyback\" on an already-open session once one device authenticates","It cannot support VoIP phones","It disables MAC address table learning entirely"], correct:[1], multi:false,
+ rationale:"Piggybacking is the confirmed weakness — device-based mode doesn't filter by source MAC after the first successful authentication."},
+{sec:"dot1x", q:"What VSA does a RADIUS server use to apply a Local User Role on an AOS-CX switch?", choices:["HPE-CPPM-Role","Aruba-User-Role","Filter-Id","Tunnel-Private-Group-ID"], correct:[1], multi:false,
+ rationale:"Aruba-User-Role (VSA ID 25) applies a Local User Role; HPE-CPPM-Role is the separate DUR/ClearPass-specific VSA."},
+{sec:"dot1x", q:"On an AOS-CX switch specifically, what does a user \"role\" govern (as opposed to a role on an HPE Aruba Networking Mobility Controller)?", choices:["Firewall, bandwidth, and captive portal behavior","VLAN, QoS, ACL, and related switch-side policies","Wireless RF power and channel assignment","Physical port speed and duplex settings"], correct:[1], multi:false,
+ rationale:"AOS-CX roles govern VLAN/QoS/ACL; option A describes the Mobility Controller's role type instead."},
+{sec:"dot1x", q:"When is the Critical-voice-role applied?", choices:["Any time the AAA server is unreachable","Only when an already-authenticated device fails to re-authenticate due to RADIUS being unreachable, and only with multi-domain auth mode enabled","Only during the initial pre-authentication phase","Whenever a device fails MAC authentication"], correct:[1], multi:false,
+ rationale:"Both conditions are required: re-auth failure due to RADIUS unreachability, and multi-domain auth mode enabled."},
+
+{sec:"macauth", q:"What does MAC authentication use to identify a device?", choices:["A username and password configured on the device","A digital certificate","The device's MAC address only","The device's IP address"], correct:[2], multi:false,
+ rationale:"MAC-auth relies solely on the device's MAC address — no credentials or certificates involved."},
+{sec:"macauth", q:"By default, what credentials does an AOS-CX switch send to the RADIUS server for MAC-auth?", choices:["A global shared password only","The device's MAC address for both username and password","The switch's own hostname and a static password","A randomly generated session token"], correct:[1], multi:false,
+ rationale:"Confirmed default: the device's MAC address is sent as both username and password."},
+{sec:"macauth", q:"What is the default quiet period before the switch retries authenticating a client that previously failed?", choices:["30 seconds","60 seconds","120 seconds","300 seconds"], correct:[1], multi:false,
+ rationale:"60 seconds is the confirmed default quiet period."},
+{sec:"macauth", q:"Which MAC-auth authentication protocol sends credentials in cleartext?", choices:["CHAP","PAP","EAP-TLS","PEAP"], correct:[1], multi:false,
+ rationale:"PAP sends credentials in cleartext; CHAP instead requires reversible-encryption password storage — a different risk."},
+{sec:"macauth", q:"Why can't CHAP's colon-delimited MAC address format be used against a Microsoft Active Directory backend?", choices:["AD doesn't support MAC-based authentication at all","AD accounts cannot use colons in this context","CHAP requires a certificate that AD doesn't support","AD only supports the PAP protocol"], correct:[1], multi:false,
+ rationale:"Confirmed limitation — colon-delimited format isn't usable with AD accounts."},
+{sec:"macauth", q:"What is the default client limit per port for MAC-auth, and what's the confirmed configurable maximum?", choices:["Default 1; configurable up to 256","Default 2; configurable up to 128","Default 0; configurable up to 512","Default 1; configurable up to 16,384"], correct:[0], multi:false,
+ rationale:"Default 1, configurable up to 256 per port; 16,384 is the switch-wide ceiling, reused as a distractor in option D."},
+{sec:"macauth", q:"What is the total MAC-authentication/802.1X client ceiling across an entire switch, regardless of method?", choices:["256","1,024","4,096","16,384"], correct:[3], multi:false,
+ rationale:"16,384 is the confirmed switch-wide ceiling across all authentication methods combined."},
+{sec:"macauth", q:"Which two features are mutually exclusive with MAC authentication on a given port? (select two)", choices:["MAC lockout","Port security","LLDP","802.1X"], correct:[0,1], multi:true,
+ rationale:"MAC authentication, MAC lockout, and port security are mutually exclusive on a port. 802.1X is explicitly combined with MAC-auth elsewhere in this module, not exclusive with it."},
+{sec:"macauth", q:"What is the default auth-precedence order when both MAC-auth and 802.1X are enabled on a port?", choices:["MAC-auth first, then 802.1X","802.1X first, then MAC-auth","Both are always attempted simultaneously by default","Whichever was configured most recently is tried first"], correct:[1], multi:false,
+ rationale:"802.1X is tried first by default, with MAC-auth as the fallback."},
+{sec:"macauth", q:"What happens to the auth-precedence setting when concurrent onboarding is enabled?", choices:["It is enforced even more strictly","It is ignored entirely — whichever method succeeds first wins","It only applies to the first authentication attempt","It reverses automatically"], correct:[1], multi:false,
+ rationale:"Concurrent onboarding starts all methods at once and ignores auth-precedence entirely."},
+{sec:"macauth", q:"Under MACsec, which parts of the frame are encrypted, and which remain in the clear?", choices:["Everything is encrypted, including the MAC addresses","The 802.1Q tag and payload are encrypted; source/destination MAC addresses remain in the clear","Only the payload is encrypted; the 802.1Q tag and MAC addresses remain in the clear","Only the MAC addresses are encrypted; the payload remains in the clear"], correct:[1], multi:false,
+ rationale:"Confirmed frame-format detail — MAC addresses stay in the clear for path forwarding; the 802.1Q tag and payload are encrypted."},
+];
+
+let idx = 0, checked = false, answers = new Array(QUESTIONS.length).fill(null);
+let results = new Array(QUESTIONS.length).fill(null);
+
+const qcount = document.getElementById('qcount');
+const scoreLive = document.getElementById('scoreLive');
+const sectionTag = document.getElementById('sectionTag');
+const qtext = document.getElementById('qtext');
+const hint = document.getElementById('hint');
+const choicesEl = document.getElementById('choices');
+const rationaleEl = document.getElementById('rationale');
+const btnPrev = document.getElementById('btnPrev');
+const btnCheck = document.getElementById('btnCheck');
+const btnNext = document.getElementById('btnNext');
+const portbar = document.getElementById('portbar');
+const lockIcon = document.getElementById('lockIcon');
+const lockLabel = document.getElementById('lockLabel');
+
+function buildPortbar(){
+  portbar.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const p = document.createElement('div');
+    p.className = 'port';
+    p.id = 'port-' + i;
+    portbar.appendChild(p);
+  });
+}
+buildPortbar();
+
+function refreshPortbar(){
+  QUESTIONS.forEach((_, i) => {
+    const p = document.getElementById('port-' + i);
+    p.className = 'port' + (i === idx ? ' current' : '') +
+      (results[i] === true ? ' done-correct' : results[i] === false ? ' done-wrong' : '');
+  });
+}
+
+function renderQuestion(){
+  checked = false;
+  const item = QUESTIONS[idx];
+  qcount.textContent = 'QUESTION ' + (idx+1) + ' / ' + QUESTIONS.length;
+  sectionTag.textContent = item.sec === 'dot1x' ? '802.1X — CH 10' : 'MAC-AUTH / MACSEC — CH 11';
+  sectionTag.className = 'section-tag' + (item.sec === 'macauth' ? ' macauth' : '');
+  qtext.textContent = item.q;
+  hint.textContent = item.multi ? 'Select all that apply, then press CHECK.' : 'Select one answer, then press CHECK.';
+  choicesEl.innerHTML = '';
+  const selected = answers[idx] || [];
+  item.choices.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'choice' + (selected.includes(i) ? ' selected' : '');
+    el.innerHTML = '<div class="mark">' + (selected.includes(i) ? '✓' : '') + '</div><div>' + c + '</div>';
+    el.onclick = () => {
+      if (checked) return;
+      let sel = answers[idx] || [];
+      if (item.multi) {
+        sel = sel.includes(i) ? sel.filter(x => x !== i) : [...sel, i];
+      } else {
+        sel = [i];
+      }
+      answers[idx] = sel;
+      renderQuestion();
+    };
+    choicesEl.appendChild(el);
+  });
+  rationaleEl.className = 'rationale';
+  rationaleEl.innerHTML = '';
+  btnCheck.disabled = !(answers[idx] && answers[idx].length);
+  btnNext.disabled = true;
+  btnPrev.disabled = idx === 0;
+  lockIcon.className = 'icon';
+  lockLabel.textContent = 'PORT: UNAUTHORIZED';
+  refreshPortbar();
+  updateScoreLive();
+}
+
+function isCorrect(item, sel){
+  if (!sel) return false;
+  const c = item.correct.slice().sort();
+  const s = sel.slice().sort();
+  return c.length === s.length && c.every((v,i) => v === s[i]);
+}
+
+function updateScoreLive(){
+  const answeredCount = results.filter(r => r !== null).length;
+  const correctCount = results.filter(r => r === true).length;
+  scoreLive.textContent = 'SCORE: ' + correctCount + ' / ' + answeredCount;
+}
+
+btnCheck.onclick = () => {
+  if (checked) return;
+  checked = true;
+  const item = QUESTIONS[idx];
+  const sel = answers[idx] || [];
+  const correct = isCorrect(item, sel);
+  results[idx] = correct;
+
+  Array.from(choicesEl.children).forEach((el, i) => {
+    el.classList.add('disabled');
+    if (item.correct.includes(i)) el.classList.add('correct');
+    else if (sel.includes(i)) el.classList.add('incorrect');
+  });
+
+  rationaleEl.innerHTML = '<b>' + (correct ? 'Correct.' : 'Not quite.') + '</b> ' + item.rationale;
+  rationaleEl.className = 'rationale show';
+  lockIcon.className = 'icon' + (correct ? ' open' : '');
+  lockLabel.textContent = correct ? 'PORT: AUTHORIZED' : 'PORT: UNAUTHORIZED';
+
+  btnNext.disabled = false;
+  refreshPortbar();
+  updateScoreLive();
+};
+
+btnNext.onclick = () => {
+  if (idx < QUESTIONS.length - 1) {
+    idx++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+};
+
+btnPrev.onclick = () => {
+  if (idx > 0) {
+    idx--;
+    renderQuestion();
+  }
+};
+
+function showResults(){
+  document.getElementById('quizArea').classList.add('hidden');
+  document.getElementById('resultsArea').classList.remove('hidden');
+  const total = QUESTIONS.length;
+  const correct = results.filter(r => r === true).length;
+  const pct = Math.round((correct/total)*100);
+  document.getElementById('finalScore').textContent = pct + '%';
+  document.getElementById('finalDetail').textContent = correct + ' of ' + total + ' correct';
+  const dot1xTotal = QUESTIONS.filter(q => q.sec === 'dot1x').length;
+  const macauthTotal = QUESTIONS.filter(q => q.sec === 'macauth').length;
+  let dot1xCorrect = 0, macauthCorrect = 0;
+  QUESTIONS.forEach((q, i) => {
+    if (results[i] === true) { if (q.sec === 'dot1x') dot1xCorrect++; else macauthCorrect++; }
+  });
+  document.getElementById('dot1xScore').textContent = dot1xCorrect + '/' + dot1xTotal;
+  document.getElementById('macauthScore').textContent = macauthCorrect + '/' + macauthTotal;
+}
+
+document.getElementById('btnRestart').onclick = () => {
+  idx = 0; checked = false;
+  answers = new Array(QUESTIONS.length).fill(null);
+  results = new Array(QUESTIONS.length).fill(null);
+  document.getElementById('resultsArea').classList.add('hidden');
+  document.getElementById('quizArea').classList.remove('hidden');
+  renderQuestion();
+};
+
+renderQuestion();
+</script>
+</body>
+</html>

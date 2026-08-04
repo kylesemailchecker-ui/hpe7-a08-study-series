@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module 6 Assessment — ACLs &amp; QoS</title>
+<style>
+  :root{
+    --bg:#0b0f0d; --panel:#111814; --panel2:#141d18;
+    --green:#37e07a; --amber:#f5c542; --red:#ef4d5e;
+    --text:#d9e6df; --dim:#7f9488; --border:#22322a;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px; background:var(--bg); color:var(--text);
+    font-family:var(--mono); min-height:100vh;
+  }
+  .frame{
+    max-width:860px; margin:0 auto; background:var(--panel);
+    border:1px solid var(--border); border-radius:10px; overflow:hidden;
+    box-shadow:0 0 40px rgba(55,224,122,0.05);
+  }
+  .chassis{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; background:var(--panel2); border-bottom:1px solid var(--border);
+  }
+  .chassis h1{ font-size:15px; margin:0; letter-spacing:.5px; color:var(--text); font-weight:600;}
+  .chassis .sub{ color:var(--dim); font-size:11px; margin-top:3px;}
+  .leds{ display:flex; gap:6px; }
+  .led{ width:9px; height:9px; border-radius:50%; background:#243128; box-shadow:inset 0 0 2px #000;}
+  .led.on-green{ background:var(--green); box-shadow:0 0 6px var(--green);}
+  .led.on-amber{ background:var(--amber); box-shadow:0 0 6px var(--amber);}
+  .led.on-red{ background:var(--red); box-shadow:0 0 6px var(--red);}
+
+  .portbar{ display:flex; gap:3px; padding:10px 20px; background:var(--panel2); border-bottom:1px solid var(--border); flex-wrap:wrap;}
+  .port{ width:14px; height:14px; border-radius:2px; background:#1d2822; border:1px solid var(--border); }
+  .port.done-correct{ background:var(--green); box-shadow:0 0 5px var(--green);}
+  .port.done-wrong{ background:var(--red); box-shadow:0 0 5px var(--red);}
+  .port.current{ border-color:var(--amber); }
+
+  .body{ padding:22px 24px 26px; }
+  .status-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+  .status-row .qcount{ color:var(--dim); font-size:12px;}
+  .status-row .score{ font-size:12px; color:var(--green);}
+  .section-tag{
+    display:inline-block; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--bg); background:var(--amber); padding:2px 8px; border-radius:3px; margin-bottom:10px;
+  }
+  .section-tag.qos{ background:#4fb3ff; }
+  .qtext{ font-size:15px; line-height:1.5; margin:6px 0 18px; color:var(--text); }
+  .hint{ color:var(--dim); font-size:11px; margin-bottom:12px; }
+  .choices{ display:flex; flex-direction:column; gap:9px; margin-bottom:18px;}
+  .choice{
+    display:flex; gap:10px; align-items:flex-start; padding:11px 13px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:6px;
+    cursor:pointer; font-size:13.5px; line-height:1.4; transition:border-color .15s;
+  }
+  .choice:hover{ border-color:#3a5346; }
+  .choice .mark{
+    flex:0 0 18px; height:18px; width:18px; border:1px solid var(--dim); border-radius:4px;
+    display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--dim); margin-top:1px;
+  }
+  .choice.selected .mark{ border-color:var(--amber); color:var(--amber); }
+  .choice.correct{ border-color:var(--green); background:rgba(55,224,122,0.08); }
+  .choice.correct .mark{ background:var(--green); border-color:var(--green); color:#06110a; }
+  .choice.incorrect{ border-color:var(--red); background:rgba(239,77,94,0.08); }
+  .choice.incorrect .mark{ background:var(--red); border-color:var(--red); color:#1a0608; }
+  .choice.disabled{ cursor:default; }
+
+  .rationale{
+    display:none; background:#0e1512; border:1px solid var(--border); border-left:3px solid var(--green);
+    padding:12px 14px; border-radius:4px; font-size:12.5px; color:var(--dim); line-height:1.5; margin-bottom:16px;
+  }
+  .rationale.show{ display:block; }
+  .rationale b{ color:var(--text); }
+
+  .controls{ display:flex; justify-content:space-between; gap:10px; }
+  button{
+    font-family:var(--mono); background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    padding:9px 16px; border-radius:5px; cursor:pointer; font-size:12.5px; letter-spacing:.3px;
+  }
+  button:hover:not(:disabled){ border-color:var(--green); color:var(--green); }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button.primary{ background:var(--green); color:#06110a; border-color:var(--green); font-weight:600;}
+  button.primary:hover{ opacity:.9; color:#06110a; }
+
+  .results{ text-align:center; padding:20px 0; }
+  .results .score-big{ font-size:44px; color:var(--green); margin:8px 0; }
+  .results .score-sub{ color:var(--dim); font-size:13px; margin-bottom:22px;}
+  .results .breakdown{ display:flex; justify-content:center; gap:26px; margin-bottom:26px; font-size:12px;}
+  .results .breakdown div span{ display:block; font-size:20px; margin-bottom:2px;}
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="chassis">
+    <div>
+      <h1>MODULE 6 — SELF-TEST CONSOLE</h1>
+      <div class="sub">Ch 9 ACLs · Ch 14 QoS — HPE7-A08 Switching Professional</div>
+    </div>
+    <div class="leds">
+      <div class="led on-green" id="ledGreen"></div>
+      <div class="led" id="ledAmber"></div>
+      <div class="led" id="ledRed"></div>
+    </div>
+  </div>
+  <div class="portbar" id="portbar"></div>
+
+  <div class="body">
+    <div id="quizArea">
+      <div class="status-row">
+        <div class="qcount" id="qcount">QUESTION 1 / 26</div>
+        <div class="score" id="scoreLive">SCORE: 0 / 0</div>
+      </div>
+      <div class="section-tag" id="sectionTag">ACL</div>
+      <div class="qtext" id="qtext"></div>
+      <div class="hint" id="hint"></div>
+      <div class="choices" id="choices"></div>
+      <div class="rationale" id="rationale"></div>
+      <div class="controls">
+        <button id="btnPrev">&larr; PREV</button>
+        <div style="display:flex; gap:10px;">
+          <button id="btnCheck" class="primary">CHECK</button>
+          <button id="btnNext" disabled>NEXT &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsArea" class="results hidden">
+      <div class="sub" style="color:var(--dim); font-size:12px; letter-spacing:1px;">RUN COMPLETE</div>
+      <div class="score-big" id="finalScore">0%</div>
+      <div class="score-sub" id="finalDetail">0 of 26 correct</div>
+      <div class="breakdown">
+        <div><span id="aclScore">0/14</span>ACL (Ch 9)</div>
+        <div><span id="qosScore">0/12</span>QoS (Ch 14)</div>
+      </div>
+      <button class="primary" id="btnRestart">RESTART RUN</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+{sec:"acl", q:"How many Access Control List types does AOS-CX support?", choices:["Two","Three","Four","Five"], correct:[1], multi:false,
+ rationale:"IPv4, IPv6, and MAC — each entered as its own configuration context."},
+{sec:"acl", q:"What happens to traffic that matches no rule in an Access Control List?", choices:["It is placed in the best-effort queue for later processing","It is dropped by an implicit \"deny any any\" at the end of the list","It is rate-limited to the lower of any configured broadcast/multicast limits","It is logged but still forwarded"], correct:[1], multi:false,
+ rationale:"Every ACL ends with an unwritten implicit deny. (Option A misapplies a QoS Trust-None behavior to this question.)"},
+{sec:"acl", q:"If a sequence ID is omitted when adding a new Access Control List rule, by what increment is it auto-assigned?", choices:["5","10","15","20"], correct:[1], multi:false,
+ rationale:"Confirmed default increment of 10."},
+{sec:"acl", q:"Which two of the following are valid actions in an Access Control List rule? (select two)", choices:["Permit","Redirect","Deny","Remark"], correct:[0,2], multi:true,
+ rationale:"Only permit and deny are confirmed ACL actions — redirect and remark are not present in source."},
+{sec:"acl", q:"When both an interface Access Control List and a VLAN Access Control List could apply to the same traffic, which is processed first?", choices:["The VLAN Access Control List","Whichever was configured most recently","The interface Access Control List","They are evaluated simultaneously and merged"], correct:[2], multi:false,
+ rationale:"Confirmed via the chapter's own Learning Check, Question 5."},
+{sec:"acl", q:"Does an inbound VLAN Access Control List filter switched traffic between two clients on that same VLAN?", choices:["Yes, always","No — it only affects traffic routed into/out of that VLAN or destined to the switch itself","Only if the count keyword is used","Only on the CX 10000 Series"], correct:[1], multi:false,
+ rationale:"Demonstrated with a worked traffic-flow example in source (Figures 9-16 through 9-20)."},
+{sec:"acl", q:"How many TCAM lookups are available on the CX 8400 Series?", choices:["9","8","2","0"], correct:[2], multi:false,
+ rationale:"The CX 8400 is a dramatic outlier at 2 lookups — 8 and 9 are real values for other platform families, reused here as distractors."},
+{sec:"acl", q:"Which AOS-CX platform is confirmed as the only one that can act as a stateful firewall?", choices:["CX 6300 Series","CX 8325 Series","CX 8400 Series","CX 10000 Series"], correct:[3], multi:false,
+ rationale:"Stated explicitly in source — all platforms support stateless ACLs, but only the CX 10000 supports stateful firewalling."},
+{sec:"acl", q:"What keyword is used inside an Access Control List rule to reference an object group?", choices:["ref","group","include","member"], correct:[1], multi:false,
+ rationale:"A small, easy-to-miss syntax detail confirmed in both chapter and lab guide."},
+{sec:"acl", q:"Do classifier policies have an implicit deny, the way Access Control Lists do?", choices:["Yes, identical behavior to Access Control Lists","No — unmatched traffic simply does not receive the policy's action","Only when applied to a VLAN, not an interface","Only on platforms that support stateful firewalling"], correct:[1], multi:false,
+ rationale:"Confirmed directly: \"There are no implicit denies in policies. If you want to apply a policy on traffic, it must match a permit.\""},
+{sec:"acl", q:"What is the correct order of steps to configure a classifier policy?", choices:["Apply the policy → configure the policy → define the class","Configure the policy → define the class → apply the policy","Define the class → configure the policy → apply the policy","Define the class → apply the policy → configure the policy"], correct:[2], multi:false,
+ rationale:"Class → policy → apply is the confirmed three-step pattern."},
+{sec:"acl", q:"What is the default shared log-timer interval that throttles syslog events across all matched Access Control List types?", choices:["1 minute","5 minutes","10 minutes","30 minutes"], correct:[1], multi:false,
+ rationale:"5 minutes is the confirmed default; 30 minutes is a real value from a lab example where the timer was reconfigured, reused here as a distractor."},
+{sec:"acl", q:"Does AOS-CX support wildcard masks in Access Control List rules?", choices:["Yes, for all three ACL types","Yes, but only for IPv6 ACLs","No — only prefix length or subnet mask notation is supported","Yes, but only when combined with an object group"], correct:[2], multi:false,
+ rationale:"Explicitly stated in the chapter body."},
+{sec:"acl", q:"Which keyword tracks a running per-rule hit count on an Access Control List entry?", choices:["log","count","track","hits"], correct:[1], multi:false,
+ rationale:"count tracks hits; log triggers a syslog event instead — reused here as a distractor."},
+
+{sec:"qos", q:"What is the ITU-recommended maximum end-to-end delay for voice traffic?", choices:["50 ms","100 ms","150 ms","200 ms"], correct:[2], multi:false,
+ rationale:"A specific, confirmed ITU recommendation."},
+{sec:"qos", q:"How many bits make up the CoS field, and where is it carried?", choices:["6 bits, in the IP header's ToS byte","3 bits, in the 802.1Q VLAN tag","8 bits, in the Ethernet frame header","3 bits, in the IP header's ToS byte"], correct:[1], multi:false,
+ rationale:"CoS is 3 bits in the 802.1Q tag; option A/D swap in DSCP's field size and location."},
+{sec:"qos", q:"Does untagged (native VLAN) traffic carry a CoS value?", choices:["Yes, it defaults to CoS 0","No — CoS requires a VLAN tag to exist at all","Only if DSCP trust is also enabled","Only on the CX 8400 Series"], correct:[1], multi:false,
+ rationale:"A confirmed gotcha: CoS requires a VLAN tag; DSCP is unaffected by tagging status."},
+{sec:"qos", q:"How many possible values does the DSCP field support?", choices:["8","32","64","128"], correct:[2], multi:false,
+ rationale:"6-bit field, 0–63 (64 values)."},
+{sec:"qos", q:"DSCP decimal value 12 maps to which AF class and drop-probability color?", choices:["AF11, green","AF12, yellow","AF13, red","AF21, green"], correct:[1], multi:false,
+ rationale:"Confirmed worked example, cross-validated against the lab guide's show qos dscp-map output."},
+{sec:"qos", q:"Which DSCP class is the recommended marking for voice traffic?", choices:["AF21","AF31","Default Forwarding (DF)","Expedited Forwarding (EF)"], correct:[3], multi:false,
+ rationale:"Cross-validated between the VSG and the chapter's AF-class tables."},
+{sec:"qos", q:"What is the default QoS trust setting on AOS-CX?", choices:["Trust CoS","Trust DSCP","Trust None","Trust Both"], correct:[2], multi:false,
+ rationale:"Trust None is the confirmed default."},
+{sec:"qos", q:"Which two statements correctly describe a port with QoS Trust set to none? (select two)", choices:["Incoming traffic is placed into Local Priority 1 / Best Effort regardless of existing markings","Incoming DSCP markings are stripped from the outgoing frame entirely","The port ignores existing DSCP/CoS markings for classification purposes","The port requires a VLAN tag to be present before it can process any traffic"], correct:[0,2], multi:true,
+ rationale:"DSCP is preserved in the outgoing frame under Trust None — only classification ignores it. Option D misapplies the CoS/VLAN-tag requirement onto trust settings."},
+{sec:"qos", q:"Ingress rate limiting for unknown-unicast traffic is supported only on which platforms?", choices:["CX 6400 and 6300 Series","CX 8400, 8325, and 8320 Series","CX 10000 Series only","All AOS-CX platforms"], correct:[1], multi:false,
+ rationale:"Confirmed exact platform list; option A is the real ICMP rate-limiting platform list, reused as a distractor."},
+{sec:"qos", q:"If both a multicast and a broadcast ingress rate limit are applied to the same interface, which value governs?", choices:["The higher of the two values","The lower of the two values","The average of the two values","The broadcast value always overrides the multicast value"], correct:[1], multi:false,
+ rationale:"Confirmed explicitly in source."},
+{sec:"qos", q:"How many Virtual Output Queues exist per destination port, per local priority?", choices:["4","6","8","16"], correct:[2], multi:false,
+ rationale:"Confirmed VOQ architecture detail."},
+{sec:"qos", q:"What is the default scheduling profile on the CX 8400 Series, and what makes it notable?", choices:["DWRR — same default as every other AOS-CX platform","Strict Priority — the only platform that supports SP at all","FIFO — the \"no QoS\" baseline used only on this platform","WFQ — the only platform that supports WFQ at all"], correct:[3], multi:false,
+ rationale:"The CX 8400 is the outlier — WFQ default, and the only platform that supports WFQ at all. Option A reuses the real DWRR-default fact (true everywhere else) as a distractor."},
+];
+
+let idx = 0, checked = false, answers = new Array(QUESTIONS.length).fill(null);
+let results = new Array(QUESTIONS.length).fill(null); // true/false per question
+
+const qcount = document.getElementById('qcount');
+const scoreLive = document.getElementById('scoreLive');
+const sectionTag = document.getElementById('sectionTag');
+const qtext = document.getElementById('qtext');
+const hint = document.getElementById('hint');
+const choicesEl = document.getElementById('choices');
+const rationaleEl = document.getElementById('rationale');
+const btnPrev = document.getElementById('btnPrev');
+const btnCheck = document.getElementById('btnCheck');
+const btnNext = document.getElementById('btnNext');
+const portbar = document.getElementById('portbar');
+const ledAmber = document.getElementById('ledAmber');
+const ledRed = document.getElementById('ledRed');
+
+function buildPortbar(){
+  portbar.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const p = document.createElement('div');
+    p.className = 'port';
+    p.id = 'port-' + i;
+    portbar.appendChild(p);
+  });
+}
+buildPortbar();
+
+function refreshPortbar(){
+  QUESTIONS.forEach((_, i) => {
+    const p = document.getElementById('port-' + i);
+    p.className = 'port' + (i === idx ? ' current' : '') +
+      (results[i] === true ? ' done-correct' : results[i] === false ? ' done-wrong' : '');
+  });
+}
+
+function renderQuestion(){
+  checked = false;
+  const item = QUESTIONS[idx];
+  qcount.textContent = 'QUESTION ' + (idx+1) + ' / ' + QUESTIONS.length;
+  sectionTag.textContent = item.sec === 'acl' ? 'ACL — CH 9' : 'QOS — CH 14';
+  sectionTag.className = 'section-tag' + (item.sec === 'qos' ? ' qos' : '');
+  qtext.textContent = item.q;
+  hint.textContent = item.multi ? 'Select all that apply, then press CHECK.' : 'Select one answer, then press CHECK.';
+  choicesEl.innerHTML = '';
+  const selected = answers[idx] || [];
+  item.choices.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'choice' + (selected.includes(i) ? ' selected' : '');
+    el.innerHTML = '<div class="mark">' + (selected.includes(i) ? '✓' : '') + '</div><div>' + c + '</div>';
+    el.onclick = () => {
+      if (checked) return;
+      let sel = answers[idx] || [];
+      if (item.multi) {
+        sel = sel.includes(i) ? sel.filter(x => x !== i) : [...sel, i];
+      } else {
+        sel = [i];
+      }
+      answers[idx] = sel;
+      renderQuestion();
+    };
+    choicesEl.appendChild(el);
+  });
+  rationaleEl.className = 'rationale';
+  rationaleEl.innerHTML = '';
+  btnCheck.disabled = !(answers[idx] && answers[idx].length);
+  btnCheck.style.display = 'inline-block';
+  btnNext.disabled = true;
+  btnPrev.disabled = idx === 0;
+  ledAmber.className = 'led';
+  ledRed.className = 'led';
+  refreshPortbar();
+  updateScoreLive();
+}
+
+function isCorrect(item, sel){
+  if (!sel) return false;
+  const c = item.correct.slice().sort();
+  const s = sel.slice().sort();
+  return c.length === s.length && c.every((v,i) => v === s[i]);
+}
+
+function updateScoreLive(){
+  const answeredCount = results.filter(r => r !== null).length;
+  const correctCount = results.filter(r => r === true).length;
+  scoreLive.textContent = 'SCORE: ' + correctCount + ' / ' + answeredCount;
+}
+
+btnCheck.onclick = () => {
+  if (checked) return;
+  checked = true;
+  const item = QUESTIONS[idx];
+  const sel = answers[idx] || [];
+  const correct = isCorrect(item, sel);
+  results[idx] = correct;
+
+  Array.from(choicesEl.children).forEach((el, i) => {
+    el.classList.add('disabled');
+    if (item.correct.includes(i)) el.classList.add('correct');
+    else if (sel.includes(i)) el.classList.add('incorrect');
+  });
+
+  rationaleEl.innerHTML = '<b>' + (correct ? 'Correct.' : 'Not quite.') + '</b> ' + item.rationale;
+  rationaleEl.className = 'rationale show';
+  ledAmber.className = correct ? 'led' : 'led on-amber';
+  ledRed.className = correct ? 'led' : 'led on-red';
+  if (correct) document.getElementById('ledGreen').className = 'led on-green';
+
+  btnNext.disabled = false;
+  refreshPortbar();
+  updateScoreLive();
+};
+
+btnNext.onclick = () => {
+  if (idx < QUESTIONS.length - 1) {
+    idx++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+};
+
+btnPrev.onclick = () => {
+  if (idx > 0) {
+    idx--;
+    renderQuestion();
+  }
+};
+
+function showResults(){
+  document.getElementById('quizArea').classList.add('hidden');
+  document.getElementById('resultsArea').classList.remove('hidden');
+  const total = QUESTIONS.length;
+  const correct = results.filter(r => r === true).length;
+  const pct = Math.round((correct/total)*100);
+  document.getElementById('finalScore').textContent = pct + '%';
+  document.getElementById('finalDetail').textContent = correct + ' of ' + total + ' correct';
+  const aclTotal = QUESTIONS.filter(q => q.sec === 'acl').length;
+  const qosTotal = QUESTIONS.filter(q => q.sec === 'qos').length;
+  let aclCorrect = 0, qosCorrect = 0;
+  QUESTIONS.forEach((q, i) => {
+    if (results[i] === true) { if (q.sec === 'acl') aclCorrect++; else qosCorrect++; }
+  });
+  document.getElementById('aclScore').textContent = aclCorrect + '/' + aclTotal;
+  document.getElementById('qosScore').textContent = qosCorrect + '/' + qosTotal;
+}
+
+document.getElementById('btnRestart').onclick = () => {
+  idx = 0; checked = false;
+  answers = new Array(QUESTIONS.length).fill(null);
+  results = new Array(QUESTIONS.length).fill(null);
+  document.getElementById('resultsArea').classList.add('hidden');
+  document.getElementById('quizArea').classList.remove('hidden');
+  renderQuestion();
+};
+
+renderQuestion();
+</script>
+</body>
+</html>

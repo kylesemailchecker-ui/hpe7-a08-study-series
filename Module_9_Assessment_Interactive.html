@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module 9 Assessment — REST API</title>
+<style>
+  :root{
+    --bg:#0b0d0f; --panel:#12161a; --panel2:#161c21;
+    --green:#3ee08a; --amber:#f5c542; --red:#ef4d5e; --blue:#4fa8ff; --purple:#a78bfa;
+    --text:#dbe4ea; --dim:#7f8e98; --border:#232b32;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px; background:var(--bg); color:var(--text);
+    font-family:var(--mono); min-height:100vh;
+  }
+  .frame{
+    max-width:860px; margin:0 auto; background:var(--panel);
+    border:1px solid var(--border); border-radius:10px; overflow:hidden;
+    box-shadow:0 0 40px rgba(167,139,250,0.06);
+  }
+  .chassis{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; background:var(--panel2); border-bottom:1px solid var(--border);
+  }
+  .chassis h1{ font-size:15px; margin:0; letter-spacing:.5px; color:var(--text); font-weight:600;}
+  .chassis .sub{ color:var(--dim); font-size:11px; margin-top:3px;}
+  .statuspill{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim);}
+  .statuspill .code{
+    font-weight:700; font-size:13px; padding:2px 9px; border-radius:4px;
+    background:#1d262c; border:1px solid var(--border); color:var(--dim);
+  }
+  .statuspill .code.ok{ background:rgba(62,224,138,0.15); border-color:var(--green); color:var(--green); }
+  .statuspill .code.err{ background:rgba(239,77,94,0.15); border-color:var(--red); color:var(--red); }
+
+  .portbar{ display:flex; gap:3px; padding:10px 20px; background:var(--panel2); border-bottom:1px solid var(--border); flex-wrap:wrap;}
+  .port{ width:12px; height:12px; border-radius:2px; background:#1d262c; border:1px solid var(--border); }
+  .port.done-correct{ background:var(--green); box-shadow:0 0 5px var(--green);}
+  .port.done-wrong{ background:var(--red); box-shadow:0 0 5px var(--red);}
+  .port.current{ border-color:var(--amber); }
+
+  .body{ padding:22px 24px 26px; }
+  .status-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+  .status-row .qcount{ color:var(--dim); font-size:12px;}
+  .status-row .score{ font-size:12px; color:var(--green);}
+  .section-tag{
+    display:inline-block; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--bg); background:var(--blue); padding:2px 8px; border-radius:3px; margin-bottom:10px;
+  }
+  .section-tag.ecosystem{ background:var(--purple); }
+  .qtext{ font-size:15px; line-height:1.5; margin:6px 0 18px; color:var(--text); }
+  .hint{ color:var(--dim); font-size:11px; margin-bottom:12px; }
+  .choices{ display:flex; flex-direction:column; gap:9px; margin-bottom:18px;}
+  .choice{
+    display:flex; gap:10px; align-items:flex-start; padding:11px 13px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:6px;
+    cursor:pointer; font-size:13.5px; line-height:1.4; transition:border-color .15s;
+  }
+  .choice:hover{ border-color:#3a4a52; }
+  .choice .mark{
+    flex:0 0 18px; height:18px; width:18px; border:1px solid var(--dim); border-radius:4px;
+    display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--dim); margin-top:1px;
+  }
+  .choice.selected .mark{ border-color:var(--amber); color:var(--amber); }
+  .choice.correct{ border-color:var(--green); background:rgba(62,224,138,0.08); }
+  .choice.correct .mark{ background:var(--green); border-color:var(--green); color:#06110a; }
+  .choice.incorrect{ border-color:var(--red); background:rgba(239,77,94,0.08); }
+  .choice.incorrect .mark{ background:var(--red); border-color:var(--red); color:#1a0608; }
+  .choice.disabled{ cursor:default; }
+
+  .rationale{
+    display:none; background:#0e1417; border:1px solid var(--border); border-left:3px solid var(--green);
+    padding:12px 14px; border-radius:4px; font-size:12.5px; color:var(--dim); line-height:1.5; margin-bottom:16px;
+  }
+  .rationale.show{ display:block; }
+  .rationale b{ color:var(--text); }
+
+  .controls{ display:flex; justify-content:space-between; gap:10px; }
+  button{
+    font-family:var(--mono); background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    padding:9px 16px; border-radius:5px; cursor:pointer; font-size:12.5px; letter-spacing:.3px;
+  }
+  button:hover:not(:disabled){ border-color:var(--green); color:var(--green); }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button.primary{ background:var(--green); color:#06110a; border-color:var(--green); font-weight:600;}
+  button.primary:hover{ opacity:.9; color:#06110a; }
+
+  .results{ text-align:center; padding:20px 0; }
+  .results .score-big{ font-size:44px; color:var(--green); margin:8px 0; }
+  .results .score-sub{ color:var(--dim); font-size:13px; margin-bottom:22px;}
+  .results .breakdown{ display:flex; justify-content:center; gap:26px; margin-bottom:26px; font-size:12px;}
+  .results .breakdown div span{ display:block; font-size:20px; margin-bottom:2px;}
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="chassis">
+    <div>
+      <h1>MODULE 9 — SELF-TEST CONSOLE</h1>
+      <div class="sub">Ch 13 REST API &middot; VSG Central Configuration via API — HPE7-A08 Switching Professional</div>
+    </div>
+    <div class="statuspill">
+      <span>STATUS:</span>
+      <span class="code" id="statusCode">---</span>
+    </div>
+  </div>
+  <div class="portbar" id="portbar"></div>
+
+  <div class="body">
+    <div id="quizArea">
+      <div class="status-row">
+        <div class="qcount" id="qcount">QUESTION 1 / 24</div>
+        <div class="score" id="scoreLive">SCORE: 0 / 0</div>
+      </div>
+      <div class="section-tag" id="sectionTag">REST FUNDAMENTALS</div>
+      <div class="qtext" id="qtext"></div>
+      <div class="hint" id="hint"></div>
+      <div class="choices" id="choices"></div>
+      <div class="rationale" id="rationale"></div>
+      <div class="controls">
+        <button id="btnPrev">&larr; PREV</button>
+        <div style="display:flex; gap:10px;">
+          <button id="btnCheck" class="primary">CHECK</button>
+          <button id="btnNext" disabled>NEXT &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsArea" class="results hidden">
+      <div class="sub" style="color:var(--dim); font-size:12px; letter-spacing:1px;">SESSION COMPLETE</div>
+      <div class="score-big" id="finalScore">0%</div>
+      <div class="score-sub" id="finalDetail">0 of 24 correct</div>
+      <div class="breakdown">
+        <div><span id="fundScore">0/14</span>REST Fundamentals</div>
+        <div><span id="ecosystemScore">0/10</span>Reference / Ecosystem / Central API</div>
+      </div>
+      <button class="primary" id="btnRestart">RESTART SESSION</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+{sec:"fund", q:"What media type do AOS-CX switches use for REST API request and response data?", choices:["XML","YAML","JSON","CSV"], correct:[2], multi:false,
+ rationale:"JSON is the confirmed standard media type for AOS-CX REST requests and responses."},
+{sec:"fund", q:"Which two of the following are among the four core components of every HTTP exchange described in source? (select two)", choices:["Method","Header","Cookie","Session ID"], correct:[0,1], multi:true,
+ rationale:"The four confirmed core components are Method, Resource/Endpoint, Header, and Body. Cookie and Session ID are real concepts from elsewhere in this module (login/session handling), reused here as distractors."},
+{sec:"fund", q:"What must a forward slash that is part of a resource ID itself be encoded as within a URI path?", choices:["%20","%2F","A double slash //","A backslash \\"], correct:[1], multi:false,
+ rationale:"%2F is the confirmed percent-encoding for a forward slash within a resource ID."},
+{sec:"fund", q:"What is the confirmed naming difference between a collection and a singleton resource?", choices:["Collections are named in the plural; singletons are named in the singular","Collections always start with a capital letter; singletons do not","Singletons support subcollections; collections do not","Collections require a query string; singletons do not"], correct:[0], multi:false,
+ rationale:"Collections are plural (e.g., /system/vlans); singletons are singular (e.g., /system, /firmware)."},
+{sec:"fund", q:"What does a GET request return when applied to a collection, versus a specific resource?", choices:["A list of resource URIs (collection) or the attributes of that resource (specific resource)","A cookie (collection) or a session token (specific resource)","A wildcard expansion (collection) or a full configuration file (specific resource)","An error code (collection) or a status code (specific resource)"], correct:[0], multi:false,
+ rationale:"Confirmed GET behavior on a collection versus a specific resource."},
+{sec:"fund", q:"Where can a wildcard character be used in a GET request?", choices:["Anywhere in the query string, but never in the path","Anywhere in the URI path, but never in the query string","Only at the very end of the path","Nowhere — wildcards are not supported on AOS-CX"], correct:[1], multi:false,
+ rationale:"Wildcards work anywhere in the path, in multiple places if needed, but never in the query string."},
+{sec:"fund", q:"Under the PUT method, what happens to a mutable attribute that is omitted from the request body?", choices:["It is left unchanged from its current value","It is reset to its default value","The request fails outright","It is copied from the most recent GET response automatically"], correct:[1], multi:false,
+ rationale:"PUT is a strict replace operation — omitted mutable attributes are reset to their default values."},
+{sec:"fund", q:"Which REST methods does the chapter give a dedicated \"Using [Method]\" explanatory section for?", choices:["GET, PUT, POST, and DELETE","GET and PATCH only","All five methods, including PATCH","PUT and DELETE only"], correct:[0], multi:false,
+ rationale:"GET, PUT, POST, and DELETE each get a dedicated walkthrough section in the captured chapter material; PATCH does not."},
+{sec:"fund", q:"What must a POST request's URI point to?", choices:["The specific resource instance being created","The collection the new resource will belong to","The parent VRF","The /rest/v1/login resource"], correct:[1], multi:false,
+ rationale:"POST's URI must point to the collection, not the new resource itself."},
+{sec:"fund", q:"Which two of the following are true of a DELETE request? (select two)", choices:["It does not contain a request body","It does not return a response body","It requires a wildcard in the URI","It always targets a collection, not a specific resource"], correct:[0,1], multi:true,
+ rationale:"DELETE has no request body and no response body. It targets a specific resource instance, not a collection — option D is the reverse of the true rule, reused as a distractor."},
+{sec:"fund", q:"What does HTTP status code 201 mean, and when is it returned?", choices:["No Content — an operation succeeded with nothing to return","Created — returned from POST operations when a new resource was successfully created","Not Modified — returned when a cached resource is still valid","Conflict — returned when the requested object already exists"], correct:[1], multi:false,
+ rationale:"201 (Created) is returned specifically from successful POST operations."},
+{sec:"fund", q:"What is the confirmed difference between status codes 401 and 403?", choices:["401 means the resource doesn't exist; 403 means the server is overloaded","401 means the request requires authentication; 403 means the server understood the request but refused it or access isn't allowed","401 is a client error; 403 is a server error","401 applies only to GET; 403 applies only to POST"], correct:[1], multi:false,
+ rationale:"401 = requires authentication; 403 = understood but refused or access not allowed."},
+{sec:"fund", q:"What are the three confirmed steps to enable REST access on an AOS-CX switch?", choices:["Configure a username/password; enable the HTTPS server on the desired VRF; set the REST access mode","Install a certificate; configure NTP; reboot the switch","Enable SNMP; configure a RADIUS server; set the access mode","Configure OSPF; enable the web UI; set a session timeout"], correct:[0], multi:false,
+ rationale:"Confirmed three-step enablement sequence: username/password, HTTPS server on the desired VRF, then REST access mode."},
+{sec:"fund", q:"What is the confirmed maximum number of concurrent REST sessions supported on an AOS-CX switch?", choices:["2","5","10","Unlimited, as long as read-write mode is enabled"], correct:[1], multi:false,
+ rationale:"5 is the confirmed session ceiling on an AOS-CX switch."},
+
+{sec:"ecosystem", q:"What is the primary purpose of the AOS-CX REST API reference interface (Swagger)?", choices:["To manage day-to-day switch configuration as the primary administrative tool","To document the API for developers, letting them explore resources and construct valid requests","To replace the CLI entirely for troubleshooting","To generate NAE agent scripts automatically"], correct:[1], multi:false,
+ rationale:"Confirmed purpose of the Swagger-based reference interface — documentation and exploration for developers."},
+{sec:"ecosystem", q:"Is it safe to freely click through and submit requests in the REST API reference interface without concern?", choices:["Yes, the interface is fully sandboxed and has no effect on the live switch","No — submitted requests take real effect on the live system","Yes, but only PUT and DELETE requests are sandboxed","No — the interface only supports read-only GET requests"], correct:[1], multi:false,
+ rationale:"Confirmed warning in source — submitted requests take real effect on the live system."},
+{sec:"ecosystem", q:"What does NAPALM stand for, and what is its role?", choices:["Network Automation and Programmability Abstraction Layer with Multivendor support — an abstraction layer for consistent multivendor switch interaction","Network Access Provisioning and Lockdown Manager — a security hardening tool","Network Analytics Platform for Automated Log Management — a logging aggregator","Network Application Programming and Load Management — a load-balancing tool"], correct:[0], multi:false,
+ rationale:"Confirmed expansion and role of NAPALM as a multivendor abstraction layer."},
+{sec:"ecosystem", q:"What makes StackStorm distinct from other automation tools described in source?", choices:["It was designed specifically for endpoint configuration","It is not designed for endpoint configuration directly, but becomes a catalyst for event-driven workflows in conjunction with tools like Ansible","It only works with NAPALM, not with any other automation tool","It replaces the need for a RADIUS server entirely"], correct:[1], multi:false,
+ rationale:"StackStorm is a workflow catalyst alongside tools like Ansible, not an endpoint-configuration tool itself."},
+{sec:"ecosystem", q:"What platform powers HPE Aruba Networking Central, and what architecture is Central's API built on?", choices:["The HPE GreenLake platform, using a microservices architecture","A standalone on-premises server, using a monolithic architecture","The HPE Aruba Networking Mobility Controller, using a client-server architecture","ClearPass, using a distributed database architecture"], correct:[0], multi:false,
+ rationale:"Confirmed HPE GreenLake platform + microservices architecture powering Central."},
+{sec:"ecosystem", q:"What token type does Central's API use for authorization, and what is its default lifetime?", choices:["A static API key with no expiration","OAuth 2.0 access tokens obtained via HPE GreenLake API client credentials, with a 2-hour default lifetime","A session cookie with a 5-session limit, the same as the AOS-CX switch REST API","A certificate-based token with a 24-hour default lifetime"], correct:[1], multi:false,
+ rationale:"Confirmed OAuth 2.0 token type with a 2-hour default ephemeral lifetime; the 5-session limit is a real AOS-CX switch fact reused as a distractor here, since it doesn't apply to Central's API."},
+{sec:"ecosystem", q:"What Postman feature allows front-end developers to begin work before the back end is fully implemented?", choices:["Context switching","Mock servers, which simulate API responses","Automated documentation generation","Collections shared across teams"], correct:[1], multi:false,
+ rationale:"Mock servers are the confirmed Postman feature enabling parallel front-end work."},
+{sec:"ecosystem", q:"What does the PyCentral SDK handle automatically that a raw, direct API call does not?", choices:["Authentication and token generation/management","VLAN tagging on trunk ports","RADIUS server failover","MACsec key rotation"], correct:[0], multi:false,
+ rationale:"The PyCentral SDK's confirmed built-in authentication/token-handling benefit; the other options are real facts from earlier modules, reused here as distractors."},
+{sec:"ecosystem", q:"What are the two confirmed API call models available when using the PyCentral SDK?", choices:["Structured (Typed) Calls and Direct Base Calls","Synchronous Calls and Asynchronous Calls","Read-Only Calls and Read-Write Calls","Local Calls and Remote Calls"], correct:[0], multi:false,
+ rationale:"Structured (Typed) Calls and Direct Base Calls are the two confirmed API call models; Read-Only/Read-Write is a real distinction from the switch-side REST access mode, reused as a distractor."},
+{sec:"ecosystem", q:"In the PyCentral SDK's confirmed 5-step deployment template, what is Step 4?", choices:["Instantiate the Central API client","Define configuration data using a YAML file","Assign the created profile to a scope and device function","Handle errors returned by the API call"], correct:[2], multi:false,
+ rationale:"Step 4 is confirmed as assigning the profile to a scope and device function; the other options are Steps 1, 2, and 5 respectively, reused as distractors."},
+];
+
+let idx = 0, checked = false, answers = new Array(QUESTIONS.length).fill(null);
+let results = new Array(QUESTIONS.length).fill(null);
+
+const qcount = document.getElementById('qcount');
+const scoreLive = document.getElementById('scoreLive');
+const sectionTag = document.getElementById('sectionTag');
+const qtext = document.getElementById('qtext');
+const hint = document.getElementById('hint');
+const choicesEl = document.getElementById('choices');
+const rationaleEl = document.getElementById('rationale');
+const btnPrev = document.getElementById('btnPrev');
+const btnCheck = document.getElementById('btnCheck');
+const btnNext = document.getElementById('btnNext');
+const portbar = document.getElementById('portbar');
+const statusCode = document.getElementById('statusCode');
+
+function buildPortbar(){
+  portbar.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const p = document.createElement('div');
+    p.className = 'port';
+    p.id = 'port-' + i;
+    portbar.appendChild(p);
+  });
+}
+buildPortbar();
+
+function refreshPortbar(){
+  QUESTIONS.forEach((_, i) => {
+    const p = document.getElementById('port-' + i);
+    p.className = 'port' + (i === idx ? ' current' : '') +
+      (results[i] === true ? ' done-correct' : results[i] === false ? ' done-wrong' : '');
+  });
+}
+
+function renderQuestion(){
+  checked = false;
+  const item = QUESTIONS[idx];
+  qcount.textContent = 'QUESTION ' + (idx+1) + ' / ' + QUESTIONS.length;
+  sectionTag.textContent = item.sec === 'fund' ? 'REST FUNDAMENTALS — CH 13' : 'REFERENCE / ECOSYSTEM / CENTRAL API — VSG';
+  sectionTag.className = 'section-tag' + (item.sec === 'ecosystem' ? ' ecosystem' : '');
+  qtext.textContent = item.q;
+  hint.textContent = item.multi ? 'Select all that apply, then press CHECK.' : 'Select one answer, then press CHECK.';
+  choicesEl.innerHTML = '';
+  const selected = answers[idx] || [];
+  item.choices.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'choice' + (selected.includes(i) ? ' selected' : '');
+    el.innerHTML = '<div class="mark">' + (selected.includes(i) ? '✓' : '') + '</div><div>' + c + '</div>';
+    el.onclick = () => {
+      if (checked) return;
+      let sel = answers[idx] || [];
+      if (item.multi) {
+        sel = sel.includes(i) ? sel.filter(x => x !== i) : [...sel, i];
+      } else {
+        sel = [i];
+      }
+      answers[idx] = sel;
+      renderQuestion();
+    };
+    choicesEl.appendChild(el);
+  });
+  rationaleEl.className = 'rationale';
+  rationaleEl.innerHTML = '';
+  btnCheck.disabled = !(answers[idx] && answers[idx].length);
+  btnNext.disabled = true;
+  btnPrev.disabled = idx === 0;
+  statusCode.className = 'code';
+  statusCode.textContent = '---';
+  refreshPortbar();
+  updateScoreLive();
+}
+
+function isCorrect(item, sel){
+  if (!sel) return false;
+  const c = item.correct.slice().sort();
+  const s = sel.slice().sort();
+  return c.length === s.length && c.every((v,i) => v === s[i]);
+}
+
+function updateScoreLive(){
+  const answeredCount = results.filter(r => r !== null).length;
+  const correctCount = results.filter(r => r === true).length;
+  scoreLive.textContent = 'SCORE: ' + correctCount + ' / ' + answeredCount;
+}
+
+btnCheck.onclick = () => {
+  if (checked) return;
+  checked = true;
+  const item = QUESTIONS[idx];
+  const sel = answers[idx] || [];
+  const correct = isCorrect(item, sel);
+  results[idx] = correct;
+
+  Array.from(choicesEl.children).forEach((el, i) => {
+    el.classList.add('disabled');
+    if (item.correct.includes(i)) el.classList.add('correct');
+    else if (sel.includes(i)) el.classList.add('incorrect');
+  });
+
+  rationaleEl.innerHTML = '<b>' + (correct ? '200 OK.' : '400 Bad Request.') + '</b> ' + item.rationale;
+  rationaleEl.className = 'rationale show';
+  statusCode.className = 'code' + (correct ? ' ok' : ' err');
+  statusCode.textContent = correct ? '200 OK' : '400 ERR';
+
+  btnNext.disabled = false;
+  refreshPortbar();
+  updateScoreLive();
+};
+
+btnNext.onclick = () => {
+  if (idx < QUESTIONS.length - 1) {
+    idx++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+};
+
+btnPrev.onclick = () => {
+  if (idx > 0) {
+    idx--;
+    renderQuestion();
+  }
+};
+
+function showResults(){
+  document.getElementById('quizArea').classList.add('hidden');
+  document.getElementById('resultsArea').classList.remove('hidden');
+  const total = QUESTIONS.length;
+  const correct = results.filter(r => r === true).length;
+  const pct = Math.round((correct/total)*100);
+  document.getElementById('finalScore').textContent = pct + '%';
+  document.getElementById('finalDetail').textContent = correct + ' of ' + total + ' correct';
+  const fundTotal = QUESTIONS.filter(q => q.sec === 'fund').length;
+  const ecosystemTotal = QUESTIONS.filter(q => q.sec === 'ecosystem').length;
+  let fundCorrect = 0, ecosystemCorrect = 0;
+  QUESTIONS.forEach((q, i) => {
+    if (results[i] === true) { if (q.sec === 'fund') fundCorrect++; else ecosystemCorrect++; }
+  });
+  document.getElementById('fundScore').textContent = fundCorrect + '/' + fundTotal;
+  document.getElementById('ecosystemScore').textContent = ecosystemCorrect + '/' + ecosystemTotal;
+}
+
+document.getElementById('btnRestart').onclick = () => {
+  idx = 0; checked = false;
+  answers = new Array(QUESTIONS.length).fill(null);
+  results = new Array(QUESTIONS.length).fill(null);
+  document.getElementById('resultsArea').classList.add('hidden');
+  document.getElementById('quizArea').classList.remove('hidden');
+  renderQuestion();
+};
+
+renderQuestion();
+</script>
+</body>
+</html>
