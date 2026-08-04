@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cumulative Practice Exam — HPE7-A08 Switching Professional</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #10161f;
+    --panel-border: #1e2a3a;
+    --accent: #ff8300;
+    --accent-dim: #b35c00;
+    --text: #d7e0ea;
+    --text-dim: #7c8a9c;
+    --correct: #2ecc71;
+    --incorrect: #e74c3c;
+    --mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    margin: 0;
+    padding: 24px;
+    background-image:
+      linear-gradient(rgba(30,42,58,0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,42,58,0.35) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .console {
+    max-width: 820px;
+    margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(255,131,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.02);
+  }
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-border);
+    background: linear-gradient(180deg, #131b26, #0d1319);
+    border-radius: 8px 8px 0 0;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #e74c3c; } .dot.y { background: #f1c40f; } .dot.g { background: #2ecc71; }
+  .titlebar span.label {
+    margin-left: 8px; color: var(--text-dim); font-size: 12px; letter-spacing: 0.5px;
+  }
+  .header {
+    padding: 20px 24px 8px;
+    border-bottom: 1px dashed var(--panel-border);
+  }
+  .header h1 {
+    color: var(--accent);
+    font-size: 18px;
+    margin: 0 0 4px;
+    letter-spacing: 0.5px;
+  }
+  .header .sub { color: var(--text-dim); font-size: 12.5px; }
+  .prompt-line { color: var(--accent-dim); font-size: 12px; margin-top: 10px; }
+  .prompt-line::before { content: "root@aos-cx-switch:~# "; color: var(--accent); }
+
+  #quiz-body { padding: 20px 24px 28px; }
+
+  .progress-wrap {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .progress-bar {
+    flex: 1; height: 6px; background: #0d1319; border: 1px solid var(--panel-border);
+    border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill { height: 100%; background: var(--accent); transition: width 0.25s ease; }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .source-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-left: 8px;
+  }
+
+  .question-text {
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+  .question-text .qnum { color: var(--accent); margin-right: 6px; }
+
+  .multi-note {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin: -8px 0 14px;
+    font-style: italic;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    display: flex; align-items: center; gap: 12px;
+    background: #0d1319;
+    border: 1px solid var(--panel-border);
+    border-radius: 5px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    font-size: 13.5px;
+  }
+  .option:hover { border-color: var(--accent-dim); background: #121a24; }
+  .option .letter {
+    flex: 0 0 auto;
+    width: 22px; height: 22px;
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11.5px; color: var(--text-dim);
+  }
+  .option.selected { border-color: var(--accent); background: rgba(255,131,0,0.08); }
+  .option.selected .letter { border-color: var(--accent); color: var(--accent); }
+  .option.correct { border-color: var(--correct); background: rgba(46,204,113,0.08); }
+  .option.correct .letter { border-color: var(--correct); color: var(--correct); background: rgba(46,204,113,0.15); }
+  .option.incorrect { border-color: var(--incorrect); background: rgba(231,76,60,0.08); }
+  .option.incorrect .letter { border-color: var(--incorrect); color: var(--incorrect); background: rgba(231,76,60,0.15); }
+  .option.disabled { cursor: default; }
+
+  .controls {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 20px;
+  }
+  button {
+    font-family: var(--mono);
+    background: #0d1319;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    padding: 9px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12.5px;
+    letter-spacing: 0.5px;
+    transition: background 0.15s ease;
+  }
+  button:hover:not(:disabled) { background: rgba(255,131,0,0.12); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #0a0e14; font-weight: bold; }
+  button.primary:hover:not(:disabled) { background: #ff9420; }
+
+  .feedback {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct { background: rgba(46,204,113,0.08); border: 1px solid var(--correct); color: #a8e6bc; }
+  .feedback.incorrect { background: rgba(231,76,60,0.08); border: 1px solid var(--incorrect); color: #f3b3ac; }
+
+  #results {
+    display: none;
+    padding: 30px 24px;
+    text-align: center;
+  }
+  #results.show { display: block; }
+  #results .score {
+    font-size: 42px;
+    color: var(--accent);
+    margin: 10px 0;
+  }
+  #results .score-label { color: var(--text-dim); font-size: 13px; }
+  #results .pass-label { font-size: 13px; margin-top: 6px; }
+  #results .pass-label.pass { color: var(--correct); }
+  #results .pass-label.fail { color: var(--incorrect); }
+  #results .breakdown {
+    margin: 24px 0;
+    text-align: left;
+    background: #0d1319;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-size: 12.5px;
+  }
+  #results .breakdown div { padding: 4px 0; display: flex; justify-content: space-between; }
+  #results .breakdown .sec-label { color: var(--text-dim); }
+  #results .breakdown .sec-score { color: var(--accent); }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="console">
+  <div class="titlebar">
+    <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    <span class="label">cumulative_practice_exam.sh — HPE7-A08 Study Series</span>
+  </div>
+
+  <div class="header">
+    <h1>CUMULATIVE PRACTICE EXAM</h1>
+    <div class="sub">HPE7-A08 Switching Professional &nbsp;|&nbsp; All 10 Modules &nbsp;|&nbsp; Weighted per Table 17-1</div>
+    <div class="prompt-line">initiate --cumulative-exam --questions=75 --pass-threshold=68%</div>
+  </div>
+
+  <div id="quiz-body">
+    <div class="progress-wrap">
+      <span id="progress-text">Question 1 / 75</span>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <span id="score-live">Score: 0</span>
+    </div>
+
+    <div class="section-tag" id="section-tag">SECTION A — OFFICIAL SAMPLE EXAM</div><span class="source-tag" id="source-tag"></span>
+    <div class="question-text"><span class="qnum" id="qnum">Q1.</span><span id="qtext"></span></div>
+    <div class="multi-note" id="multi-note" style="display:none;">(Select all that apply)</div>
+
+    <div class="options" id="options"></div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="controls">
+      <button id="btn-reset">reset --all</button>
+      <button class="primary" id="btn-submit" disabled>submit --answer</button>
+      <button class="primary" id="btn-next" style="display:none;">next --question</button>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="section-tag">EXAM COMPLETE</div>
+    <div class="score" id="final-score">0 / 75</div>
+    <div class="score-label">FINAL SCORE</div>
+    <div class="pass-label" id="pass-label"></div>
+    <div class="breakdown" id="breakdown"></div>
+    <button class="primary" id="btn-restart">restart --exam</button>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+  // ===== SECTION A: OFFICIAL HPE7-A08 SAMPLE EXAM (verbatim, Ch17) =====
+  { section: "A", src: "Official Ch17", num: "Q1", multi: false,
+    text: "Which statement correctly describes the role of IGMP in multicast group membership?",
+    options: ["IGMP is a router-to-router protocol", "Hosts use IGMP to join multicast groups", "IGMP uses IP protocol number 5", "Only the querier forwards multicast traffic"],
+    correct: [1], explain: "Hosts use IGMP to join multicast groups." },
+  { section: "A", src: "Official Ch17", num: "Q2", multi: false,
+    text: "A company has an existing wireless solution deployed with HPE Aruba Networking APs and mobility controllers running 8.x code. The company wants the same security and firewall policies for both wired and wireless traffic. Which solution should the company implement?",
+    options: ["802.1X authentication", "Downloadable user roles using ClearPass", "IPSec", "User based tunneling"],
+    correct: [3], explain: "As the company uses HPE Aruba Networking solutions, they should implement user-based tunneling for unified policy enforcement across wired and wireless traffic." },
+  { section: "A", src: "Official Ch17", num: "Q3", multi: true,
+    text: "Which two factors can influence the assignment of Local Priority and Color values in the prioritization stage of AOS-CX?",
+    options: ["Ingress packet L3 DSCP marks", "Egress interface settings", "Egress packet L2 CoS marks", "Classifier-based policy"],
+    correct: [0,3], explain: "Ingress packet L3 DSCP marks and classifier-based policy are the confirmed factors." },
+  { section: "A", src: "Official Ch17", num: "Q4", multi: true,
+    text: "Why might network administrators seek alternatives to the old Simple Network Management Protocol (SNMP) and CLI in modern campus network designs?",
+    options: ["SNMP's poll-driven approach is outdated", "CLI is excellent for machine-to-machine interaction", "CLI files are highly secure", "SNMP and CLI hinder scalability"],
+    correct: [0,3], explain: "SNMP's poll-driven approach is outdated, and SNMP/CLI both hinder scalability." },
+  { section: "A", src: "Official Ch17", num: "Q5", multi: false,
+    text: "Which action needs to be configured at the end of an Access Control List (ACL) to forward all the traffic that does not match with any of the rules in the ACL?",
+    options: ["The implicit deny behavior of ACLs will be sufficient to achieve this.", "Explicitly add a rule to deny all the non-matching traffic.", "Create a permit ip any any rule.", "Create a deny ip any any rule with log action."],
+    correct: [2], explain: "To forward unmatched traffic, the implicit deny must be overridden with a \"permit all\" rule at the end." },
+  { section: "A", src: "Official Ch17", num: "Q6", multi: true,
+    text: "What are two benefits of using NAE agents for network troubleshooting?",
+    options: ["Manual data collection", "Continuous real-time monitoring", "Automatic alerts", "Reduced network performance"],
+    correct: [1,2], explain: "Continuous real-time monitoring and automatic alerts are the two confirmed benefits." },
+  { section: "A", src: "Official Ch17", num: "Q7", multi: false,
+    text: "Based on the OSPF configuration below, how many routes will routing switches see in Area 1? Two areas exist; there is only one ABR for Area 1. ABR config:\n  router ospf 1\n  area 0\n  area 1 stub no-summary\nRoutes: Area 0: 5 (Type 1/2) · Area 1: 10 (Type 1/2) · External: 2 (Type 5)",
+    options: ["15", "6", "11", "12"],
+    correct: [2], explain: "With this configuration there will be 11 routes in Area 1 (reproduced verbatim from the official source, which does not show the arithmetic derivation)." },
+  { section: "A", src: "Official Ch17", num: "Q8", multi: false,
+    text: "After the configuration below, authentication fails and switch ports always remain in the EAP start state:\n  aaa authentication port-access dot1x authenticator radius server-group cppm\n  aaa authentication port-access dot1x authenticator enable\n  radius-server host cppm key plaintext aruba123 vrf mgmt\n  interface 1/1/6 - 1/1/24\n  aaa authentication port-access dot1x authenticator\n  enable\nWhat should the administrator do to fix this?",
+    options: ["Set the ports to client-mode.", "Set the ports to device-mode.", "Configure server group cppm.", "Enable change of authorization (CoA)."],
+    correct: [2], explain: "The server group named cppm is missing from the configuration." },
+  { section: "A", src: "Official Ch17", num: "Q9", multi: true,
+    text: "Which of the following are true about VSX Multi-Chassis Link Aggregation in AOS-CX switches?",
+    options: ["VSX MC-LAG allows for active-active forwarding across two switches.", "VSX MC-LAG is limited to only Layer 2 traffic.", "VSX MC-LAG can reduce downtime during software upgrades.", "VSX MC-LAG requires a dedicated management switch to operate."],
+    correct: [0,2], explain: "VSX MC-LAG allows active-active forwarding and can reduce downtime during software upgrades." },
+  { section: "A", src: "Official Ch17", num: "Q10", multi: false,
+    text: "Which command is used to configure an interface to use a specific VRF other than the default VRF?",
+    options: ["vrf attach <VRF-NAME>", "vrf allowed <VRF-NAME>", "vrf access <VRF-NAME>", "vrf enable <VRF-NAME>"],
+    correct: [0], explain: "An interface is attached to a VRF using the vrf attach command." },
+  { section: "A", src: "Official Ch17", num: "Q11", multi: false,
+    text: "What does the GET method return when used on a specific resource?",
+    options: ["A list of URIs", "The attributes of the resource", "The resource's JSON model", "The resource's metadata"],
+    correct: [1], explain: "GET returns the attributes of the resource." },
+  { section: "A", src: "Official Ch17", num: "Q12", multi: false,
+    text: "An ecommerce company wants to implement BGP with 25+ exit points across 20 different BGP routers, without a fully-meshed iBGP peering between all routers. Which feature reduces the number of peers to define?",
+    options: ["Next-hop-self", "BFD", "Peer-Groups", "Route reflectors"],
+    correct: [3], explain: "Route reflectors simplify the iBGP topology and prevent full-mesh iBGP peering." },
+  { section: "A", src: "Official Ch17", num: "Q13", multi: false,
+    text: "What are the key parameters of the Unidirectional Link Detection (UDLD) protocol configuration?",
+    options: ["mode, interval, and retries", "aggressive, normal, and Aruba-OS", "vlan, port, and port-type", "mode, role, and priority"],
+    correct: [0], explain: "UDLD's key configuration parameters are operating mode, packet transmission interval, and retry count." },
+  { section: "A", src: "Official Ch17", num: "Q14", multi: false,
+    text: "What information can you obtain using the show ip igmp command?",
+    options: ["Only IGMP group memberships", "VLAN configuration details", "Querier state and IP address", "MAC address table"],
+    correct: [2], explain: "The command shows the querier state and IP address." },
+  { section: "A", src: "Official Ch17", num: "Q15", multi: false,
+    text: "Which of the following statements is true about PIM-Dense Mode?",
+    options: ["PIM-DM assumes nobody wants to receive the stream.", "PIM-DM is best suited for low-bandwidth environments.", "PIM-DM floods multicasts to all neighbours.", "PIM-DM requires complex configuration."],
+    correct: [2], explain: "PIM-DM floods multicasts to all neighbors." },
+  { section: "A", src: "Official Ch17", num: "Q16", multi: false,
+    text: "What is required for an NAE script to start monitoring attributes and taking actions?",
+    options: ["An administrator login.", "An enabled NAE agent.", "CLI command execution.", "A factory reset."],
+    correct: [1], explain: "An enabled NAE agent is required to start monitoring attributes and taking actions." },
+  { section: "A", src: "Official Ch17", num: "Q17", multi: false,
+    text: "Which type of ACL application should be implemented to control traffic switched within a subnet with the same rules applied to all devices in the subnet?",
+    options: ["ACLs applied to different ports of the subnet", "ACLs applied to the VLAN associated with the subnet", "ACLs applied to the subnet's VLAN interfaces", "ACLs applied to the LAG interfaces of the subnet"],
+    correct: [1], explain: "To control traffic switched within a subnet with uniform rules, apply the ACL to the VLAN." },
+  { section: "A", src: "Official Ch17", num: "Q18", multi: false,
+    text: "A network administrator sets up both 802.1X and RADIUS-based MAC-auth on a port. For which clients does the RADIUS server need accounts with their MAC addresses?",
+    options: ["All clients.", "Clients that support 802.1X.", "Clients that support CHAP.", "Clients that do not support 802.1X."],
+    correct: [3], explain: "Clients that do not support 802.1X require a MAC-address-based account for authentication." },
+  { section: "A", src: "Official Ch17", num: "Q19", multi: false,
+    text: "MaxNet company has a pair of AOS-CX switches connected to external networks, both configured for OSPF. The administrator wants to import external routes on both switches, but assign different seed metrics, and import them as external Type 1 routes. How can this be implemented?",
+    options: ["Configure a route map with the route type and metrics.", "Define the route type and metrics using the OSPF process.", "Configure a policy to import routes with the correct route type and metrics.", "Define a class and policy map with the required route type and metrics."],
+    correct: [0], explain: "A route map with a route type and metrics is required to redistribute external routes as Type 1." },
+  { section: "A", src: "Official Ch17", num: "Q20", multi: true,
+    text: "Which of the following are benefits of the AOS-CX operating system's microservices architecture?",
+    options: ["Modularity allowing easier updates and maintenance", "Exclusively designed for unicast communication", "Enhanced resilience and fault isolation", "Slower development and deployment processes"],
+    correct: [0,2], explain: "Modularity (easier updates/maintenance) and enhanced resilience/fault isolation are the confirmed benefits." },
+  { section: "A", src: "Official Ch17", num: "Q21", multi: false,
+    text: "What is the effect of executing the following commands while configuring policy-based routing on an interface?\n  policy pbr_policy_1\n   10 class ip action pbr pbr_action_list_1",
+    options: ["Defines a list of actions to be taken on the matched traffic", "Defines the criteria for matching traffic", "Applies the PBR policy on the desired interface", "Creates a PBR policy from the specified action list"],
+    correct: [3], explain: "The policy command creates a policy from the action lists in the PBR configuration." },
+  { section: "A", src: "Official Ch17", num: "Q22", multi: false,
+    text: "A company wants to implement access control on the Ethernet ports of AOS-CX switches. The company has a readily-available AAA solution. Which security features can the company implement along with the existing infrastructure?",
+    options: ["User-based tunneling", "Device fingerprinting", "Local user roles", "Port-based tunneling"],
+    correct: [2], explain: "With a third-party AAA solution already in place, local user roles is the applicable solution in this scenario." },
+  { section: "A", src: "Official Ch17", num: "Q23", multi: false,
+    text: "Which network troubleshooting principle recommends reloading the last working checkpoint to revive a defective network?",
+    options: ["Divide and conquer", "Follow the path", "Spot the difference", "Replace configuration"],
+    correct: [3], explain: "The \"replace configuration\" principle recommends restoring the last-known-working configuration." },
+  { section: "A", src: "Official Ch17", num: "Q24", multi: false,
+    text: "Which of the following is the correct tunneling of user traffic between AOS-CX switches and HPE Aruba Networking mobility controllers?",
+    options: ["Using IPSec to protect the data plane traffic.", "Using IPSec to protect the control plane traffic.", "Using a GRE tunnel for the data plane traffic.", "Using PAPI for the data plane traffic."],
+    correct: [2], explain: "UBT uses a GRE tunnel to carry user traffic between the AOS-CX switch and the mobility controller." },
+  { section: "A", src: "Official Ch17", num: "Q25", multi: false,
+    text: "Which type of traffic is nearly always a candidate for QoS prioritization?",
+    options: ["TCP/File Transfer", "UDP/Voice/Video", "FTP and TFTP", "Low priority UDP traffic"],
+    correct: [1], explain: "UDP, voice, and video traffic are always good candidates for QoS prioritization." },
+  { section: "A", src: "Official Ch17", num: "Q26", multi: false,
+    text: "Which REST API method is used to create a new resource in AOS-CX switches?",
+    options: ["POST", "GET", "PUT", "DELETE"],
+    correct: [0], explain: "POST is used to create a new resource in AOS-CX switches." },
+  { section: "A", src: "Official Ch17", num: "Q27", multi: false,
+    text: "Which component of the private VLAN architecture provides isolation between devices of different secondary VLANs while providing connectivity with devices of the same secondary VLAN as well as the external world?",
+    options: ["Isolated VLAN", "Community VLAN", "Primary VLAN", "Promiscuous port"],
+    correct: [1], explain: "Devices in a community VLAN can communicate with each other through Layer 2 switching, while remaining isolated from other secondary VLANs." },
+  { section: "A", src: "Official Ch17", num: "Q28", multi: false,
+    text: "How often does an NAE agent collect data and write it to the time-series database?",
+    options: ["Every second", "Every five seconds", "Every minute", "Every hour"],
+    correct: [1], explain: "An NAE agent collects data every five seconds." },
+  { section: "A", src: "Official Ch17", num: "Q29", multi: false,
+    text: "A multinational company uses BGP to connect its sites over the internet. A newly-acquired branch has an ASN that overlaps with an existing branch and has a route to any subnet within that range. How should the company address the overlapping ASNs to integrate the new branch?",
+    options: ["Change the ASN of the new branch to a private ASN and use BGP confederation.", "Disable BGP at the new branch and use static routing.", "Use the same ASN for the new branch as the existing branch and enable route aggregation.", "Implement BGP route reflectors at the new branch to avoid ASN conflicts."],
+    correct: [0], explain: "Confederation divides a large AS into sub-ASes that can be assigned private ASNs, resolving the overlap." },
+  { section: "A", src: "Official Ch17", num: "Q30", multi: false,
+    text: "What mechanisms enhance the resiliency protecting a VSX pair of switches from a split brain situation?",
+    options: ["Inter-Switch Link (ISL) for forwarding traffic", "Configuration synchronization", "Keepalive mechanism for peer status monitoring", "Active-gateway"],
+    correct: [2], explain: "The keepalive mechanism for peer status monitoring is what enhances VSX resiliency against split-brain." },
+
+  // ===== SECTION B: TROUBLESHOOTING METHODOLOGY (verbatim, Ch16-based) =====
+  { section: "B", src: "M10 §B", num: "Q31", multi: false,
+    text: "What are the two steps of the confirmed simplified troubleshooting process?",
+    options: ["Analyze the problem, then implement a fix", "Identify the problem, then solve the problem", "Hypothesize a cause, then validate it", "Document the problem, then escalate it"],
+    correct: [1], explain: "Identify the problem, then solve the problem — the confirmed two-step simplified process." },
+  { section: "B", src: "M10 §B", num: "Q32", multi: false,
+    text: "Which troubleshooting principle is most consistent with removing all line cards from a chassis switch and testing, then swapping back half the cards at a time?",
+    options: ["Follow the path", "Spot the difference", "Divide and conquer", "Replace configuration"],
+    correct: [2], explain: "The chassis line-card example is the confirmed worked example for Divide and conquer." },
+  { section: "B", src: "M10 §B", num: "Q33", multi: false,
+    text: "Why does source caution against relying solely on ping/traceroute results under the \"Follow the path\" principle?",
+    options: ["Ping and traceroute are deprecated commands on AOS-CX", "Many firewalls drop ping/traceroute traffic by policy, so a failed ping doesn't necessarily mean the path is broken", "Ping and traceroute only operate at Layer 7", "Ping and traceroute require a Mobility Controller to function"],
+    correct: [1], explain: "Firewalls often drop ping/traceroute traffic by policy, so a failed ping doesn't confirm a broken path." },
+  { section: "B", src: "M10 §B", num: "Q34", multi: false,
+    text: "What is confirmed as the single most important characteristic to cultivate when solving networking problems?",
+    options: ["Formal certification", "Calmness", "Access to a test lab", "Fast typing speed on the CLI"],
+    correct: [1], explain: "Calmness is confirmed as the single most important characteristic for problem-solving." },
+  { section: "B", src: "M10 §B", num: "Q35", multi: false,
+    text: "According to source, does high familiarity and simplicity mean a methodical approach should be skipped entirely?",
+    options: ["Yes — methodology is only useful for complex, unfamiliar systems", "No — it's still often best to use an organized methodology anyway, to maintain readiness for harder future scenarios", "Yes, but only if the technician has more than two years of experience", "No, but only formal training can substitute for methodology in simple cases"],
+    correct: [1], explain: "Even with high familiarity/simplicity, using an organized methodology anyway maintains good habits for harder future scenarios." },
+  { section: "B", src: "M10 §B", num: "Q36", multi: true,
+    text: "Which two of the following are among the six confirmed steps of the problem-solving methodology?",
+    options: ["Hypothesis", "Escalation", "Validation", "Notification"],
+    correct: [0,2], explain: "Hypothesis and Validation are two of the six confirmed steps (alongside Identification, Analysis, Implementation, Verification)." },
+  { section: "B", src: "M10 §B", num: "Q37", multi: false,
+    text: "What is the confirmed difference between a minor iteration and a major iteration in the problem-solving methodology?",
+    options: ["A minor iteration returns to the preceding step; a major iteration returns all the way to Identification", "A minor iteration skips Verification; a major iteration skips Validation", "A minor iteration is used only for hardware issues; a major iteration is used only for software issues", "A minor iteration requires manager approval; a major iteration does not"],
+    correct: [0], explain: "A minor iteration returns to the preceding step; a major iteration returns all the way to Identification." },
+  { section: "B", src: "M10 §B", num: "Q38", multi: false,
+    text: "Into which three confirmed categories does source divide network troubleshooting tools?",
+    options: ["Command-line tools, software tools, and hardware tools", "Vendor tools, open-source tools, and proprietary tools", "Layer 1 tools, Layer 2 tools, and Layer 3 tools", "Diagnostic tools, repair tools, and monitoring tools"],
+    correct: [0], explain: "Command-line tools, software tools, and hardware tools are the three confirmed categories." },
+
+  // ===== SECTION C: RESAMPLED FROM MODULES 1-9, WEIGHTED PER TABLE 17-1 =====
+  { section: "C", src: "M1", num: "Q39", multi: false,
+    text: "Which four characteristics does HPE Aruba Networking use to describe the AOS-CX operating system?",
+    options: ["Fast, Reliable, Scalable, Cloud-native", "Programmable, Extensible, Innovative, Secure", "Open, Modular, Redundant, Automated", "Unified, Portable, Lightweight, Distributed"],
+    correct: [1], explain: "Programmable, Extensible, Innovative, and Secure are the four confirmed AOS-CX pillars." },
+  { section: "C", src: "M1", num: "Q40", multi: false,
+    text: "What AOS-CX security feature prevents the switch from booting if any hardware component fails an authenticity/malware check?",
+    options: ["Secure Boot Verification Protocol", "A trusted boot process", "Zeroize on tamper", "Chain of Custody validation"],
+    correct: [1], explain: "AOS-CX supports a trusted boot process — the switch will not boot unless every hardware component checks out." },
+  { section: "C", src: "M1", num: "Q41", multi: false,
+    text: "In an AOS-CX switch model name, what does the \"M\" suffix indicate?",
+    options: ["Management-only switch", "Multicast-optimized switch", "Modular chassis", "Metro-scale switch"],
+    correct: [2], explain: "\"M\" suffix (e.g., CX 6300M) denotes modular; \"F\" denotes fixed." },
+  { section: "C", src: "M1", num: "Q42", multi: false,
+    text: "On which platform is Virtual Output Queuing confirmed to NOT be supported?",
+    options: ["CX 8400 Series", "CX 6400 Series", "CX 8325 Series", "CX 6300 Series"],
+    correct: [2], explain: "The CX 8325 Series is confirmed to NOT support VOQ." },
+  { section: "C", src: "M1", num: "Q43", multi: false,
+    text: "What is the default state of Quick PoE (\"Fast PoE\") on the subsystem?",
+    options: ["Enabled by default", "Disabled by default", "Enabled only on modular chassis", "Configurable only via REST API"],
+    correct: [1], explain: "Quick PoE is disabled by default for the subsystem." },
+  { section: "C", src: "M2", num: "Q44", multi: false,
+    text: "What is the core architectural distinction between VSX and VSF?",
+    options: ["VSF keeps control and management planes independent per switch, synchronized; VSX centralizes them into a single logical switch.", "VSX keeps control and management planes independent per switch, synchronized; VSF centralizes them into a single logical switch.", "Both VSX and VSF require every member switch to run an identical AOS-CX software version at all times.", "VSX is supported only on the CX 6200 and CX 6300 Series."],
+    correct: [1], explain: "VSX keeps control/management planes independent per switch and synchronized; VSF centralizes them into a single logical switch." },
+  { section: "C", src: "M2", num: "Q45", multi: false,
+    text: "A network engineer needs two switches to run different AOS-CX software versions during a near-zero-downtime upgrade. Which technology supports this, and why?",
+    options: ["VSF, because its centralized control plane tolerates version mismatches.", "VSX, because its independent, synchronized control/management planes allow switches to run different OS versions with near-zero downtime.", "Neither technology supports mismatched OS versions during an upgrade.", "This requires disabling vsx-sync vsx-global first."],
+    correct: [1], explain: "VSX's independent, synchronized control/management planes allow mismatched OS versions with near-zero downtime." },
+  { section: "C", src: "M3", num: "Q46", multi: false,
+    text: "Per the VSG best-practice guidance, how many OSPF areas should a typical single campus LAN use?",
+    options: ["One single area, with multi-area reserved for connecting multiple campus sites or WAN topologies.", "At minimum three areas, one per tier (Access, Aggregation, Core).", "As many areas as there are VLANs.", "Area 0 must never be used in a campus LAN design."],
+    correct: [0], explain: "A single OSPF area is used for the campus LAN itself; multi-area designs are reserved for connecting multiple sites or WAN topologies." },
+  { section: "C", src: "M3", num: "Q47", multi: false,
+    text: "What is a virtual link, and what is the guidance on when to use one?",
+    options: ["A physical backup cable between two ABRs, used whenever redundancy is desired.", "A logical, point-to-point OSPF connection between two ABRs tunneled through a transit area — described as a patch, to be used only when no other way exists to connect a new area to the backbone.", "A permanent design pattern recommended for all new area deployments.", "A feature exclusive to NSSA areas."],
+    correct: [1], explain: "A virtual link is a logical point-to-point OSPF connection through a transit area, explicitly described as a patch of last resort." },
+  { section: "C", src: "M4", num: "Q48", multi: false,
+    text: "What risk does a multi-homed customer Autonomous System face if it doesn't filter outbound BGP advertisements to its ISPs?",
+    options: ["It risks losing its public IP allocation.", "It risks unintentionally becoming a transit Autonomous System, carrying traffic between two unrelated upstream ISPs.", "It risks its BGP session timing out due to excessive updates.", "It risks being unable to originate its own routes."],
+    correct: [1], explain: "Without outbound filtering, a multi-homed customer AS risks becoming an unintentional transit AS between two unrelated ISPs." },
+  { section: "C", src: "M8", num: "Q49", multi: false,
+    text: "At what confirmed campus scale does the VSG state gateways are required?",
+    options: ["More than 100 access points and 1,000 clients at a single site", "More than 500 access points and 5,000 clients at a single site", "More than 1,000 access points and 10,000 clients at a single site", "Gateways are required regardless of scale"],
+    correct: [1], explain: "Confirmed VSG sizing guidance: more than 500 access points and 5,000 clients at a single site." },
+  { section: "C", src: "M9", num: "Q50", multi: false,
+    text: "What platform powers HPE Aruba Networking Central, and what architecture is Central's API built on?",
+    options: ["The HPE GreenLake platform, using a microservices architecture", "A standalone on-premises server, using a monolithic architecture", "The HPE Aruba Networking Mobility Controller, using a client-server architecture", "ClearPass, using a distributed database architecture"],
+    correct: [0], explain: "Confirmed HPE GreenLake platform + microservices architecture." },
+  { section: "C", src: "M9", num: "Q51", multi: false,
+    text: "What token type does Central's API use for authorization, and what is its default lifetime?",
+    options: ["A static API key with no expiration", "OAuth 2.0 access tokens obtained via HPE GreenLake API client credentials, with a 2-hour default lifetime", "A session cookie with a 5-session limit, the same as the AOS-CX switch REST API", "A certificate-based token with a 24-hour default lifetime"],
+    correct: [1], explain: "Confirmed OAuth 2.0 token type with a 2-hour default ephemeral lifetime." },
+  { section: "C", src: "M9", num: "Q52", multi: false,
+    text: "What are the three confirmed steps to enable REST access on an AOS-CX switch?",
+    options: ["Configure a username/password; enable the HTTPS server on the desired VRF; set the REST access mode", "Install a certificate; configure NTP; reboot the switch", "Enable SNMP; configure a RADIUS server; set the access mode", "Configure OSPF; enable the web UI; set a session timeout"],
+    correct: [0], explain: "Confirmed three-step enablement sequence: username/password, HTTPS server on the desired VRF, REST access mode." },
+  { section: "C", src: "M6", num: "Q53", multi: false,
+    text: "What is the default scheduling profile on the CX 8400 Series, and what makes it notable?",
+    options: ["DWRR — same default as every other AOS-CX platform", "Strict Priority — the only platform that supports SP at all", "FIFO — the \"no QoS\" baseline used only on this platform", "WFQ — the only platform that supports WFQ at all"],
+    correct: [3], explain: "CX 8400 is the only WFQ-capable platform." },
+  { section: "C", src: "M8", num: "Q54", multi: false,
+    text: "What two protocols does User-Based Tunneling use to encapsulate wireless-style traffic from a switch to a controller?",
+    options: ["IPsec and TLS", "GRE and VXLAN", "MPLS and GRE", "VXLAN and IPsec"],
+    correct: [1], explain: "GRE and VXLAN are confirmed as the two tunneling mechanisms for UBT." },
+  { section: "C", src: "M9", num: "Q55", multi: false,
+    text: "What does NAPALM stand for, and what is its role?",
+    options: ["Network Automation and Programmability Abstraction Layer with Multivendor support — an abstraction layer for consistent multivendor switch interaction", "Network Access Provisioning and Lockdown Manager — a security hardening tool", "Network Analytics Platform for Automated Log Management — a logging aggregator", "Network Application Programming and Load Management — a load-balancing tool"],
+    correct: [0], explain: "Confirmed expansion and role of NAPALM as a multivendor abstraction layer." },
+  { section: "C", src: "M3", num: "Q56", multi: false,
+    text: "What happens if a stub/NSSA setting is mismatched between two OSPF neighbors in the same area?",
+    options: ["The adjacency forms normally, but routes are filtered incorrectly.", "The adjacency fails to form at all, logged as an \"Options mismatch.\"", "Only Type 3 LSAs are affected; Type 1/2 continue normally.", "The router with the mismatched setting is automatically demoted to DROTHER."],
+    correct: [1], explain: "A mismatched stub/NSSA setting causes an Options mismatch and prevents the adjacency from forming at all." },
+  { section: "C", src: "M4", num: "Q57", multi: false,
+    text: "What must be enabled for BFD to actually protect a BGP session, and what happens if only one is done?",
+    options: ["Only the neighbor-level fall-over bfd command is needed; global BFD is optional.", "Both global bfd and neighbor-level fall-over bfd are required; neighbor-level alone leaves the session admin-down.", "Only the global bfd command is needed; neighbor-level configuration is automatic.", "BFD requires no configuration — it activates automatically once a BGP session is established."],
+    correct: [1], explain: "Both global bfd and neighbor-level fall-over bfd are required simultaneously — neighbor-level alone leaves the session admin-down." },
+  { section: "C", src: "M7", num: "Q58", multi: false,
+    text: "In device-based authentication mode, what is the confirmed security weakness?",
+    options: ["It requires a certificate on every device", "Unauthorized devices can \"piggyback\" on an already-open session once one device authenticates", "It cannot support VoIP phones", "It disables MAC address table learning entirely"],
+    correct: [1], explain: "Piggybacking is the confirmed weakness of device-based mode." },
+  { section: "C", src: "M2", num: "Q59", multi: false,
+    text: "What extra step does a VSX pair require when configuring a Private VLAN, that the Chapter 3 text itself does not mention?",
+    options: ["Disabling vsx-sync vsx-global before applying any PVLAN command.", "Issuing vsx-sync inside the same VLAN context after the private-vlan command — confirmed only in the lab transcript, not the chapter.", "Configuring Active Gateway on the primary VLAN's SVI first.", "Applying LACP Fallback to the promiscuous port."],
+    correct: [1], explain: "Issuing vsx-sync inside the same VLAN context after the private-vlan command is required on VSX pairs, per the lab transcript." },
+  { section: "C", src: "M1", num: "Q60", multi: false,
+    text: "After a software update causes NAE script errors, what confirmed step helps avoid an \"Agent data not found\" error on the Analytics dashboard?",
+    options: ["Reboot the switch a second time", "Close the old default-agent graph panel from the previous software release", "Disable NAE entirely until the next release", "Manually edit the time-series database file"],
+    correct: [1], explain: "Closing the old default-agent graph panel from the previous software release avoids the \"Agent data not found\" error." },
+  { section: "C", src: "M7", num: "Q61", multi: false,
+    text: "Can the CoA/DM time-window check be disabled on AOS-CX, the way it could on older AOS-S switches?",
+    options: ["Yes, with a single command", "No — it cannot be disabled; NTP synchronization is the recommended workaround", "Yes, but only if dynamic authorization is disabled", "No, but the window can be set to 0 to effectively disable it"],
+    correct: [1], explain: "Confirmed AOS-CX cannot disable this check, unlike older AOS-S — NTP synchronization is the recommended fix." },
+  { section: "C", src: "M8", num: "Q62", multi: false,
+    text: "What happens if a DUR name sent by ClearPass doesn't match an existing local role reference on the switch?",
+    options: ["The switch creates the role automatically", "The client's status shows \"Not Ready\" instead of \"Applied\"", "Authentication fails outright with no role assigned", "The switch falls back to the transit VLAN"],
+    correct: [1], explain: "Confirmed troubleshooting behavior — \"Not Ready\" status appears on a role-name mismatch." },
+  { section: "C", src: "M9", num: "Q63", multi: false,
+    text: "Under the PUT method, what happens to a mutable attribute that is omitted from the request body?",
+    options: ["It is left unchanged from its current value", "It is reset to its default value", "The request fails outright", "It is copied from the most recent GET response automatically"],
+    correct: [1], explain: "PUT is a strict replace — omitted mutable attributes reset to default." },
+  { section: "C", src: "M6", num: "Q64", multi: false,
+    text: "How many TCAM lookups are available on the CX 8400 Series?",
+    options: ["9", "8", "2", "0"],
+    correct: [2], explain: "Confirmed Table 9-2 value for the CX 8400 Series." },
+  { section: "C", src: "M5", num: "Q65", multi: false,
+    text: "How many IP multicast addresses map to a single multicast MAC address, and why?",
+    options: ["Exactly 1-to-1 — every multicast IP has a unique MAC address.", "32 IP addresses map to each MAC address, because only 23 of the 32 relevant IP bits map into the low-order 23 bits of the MAC address.", "256 IP addresses map to each MAC address, based on the last octet only.", "8 IP addresses map to each MAC address, based on a 3-bit hash."],
+    correct: [1], explain: "32 IP addresses map to each MAC address, since only 23 of the 32 relevant IP bits map into the MAC's low-order 23 bits." },
+  { section: "C", src: "M8", num: "Q66", multi: false,
+    text: "What is the confirmed tunnel scalability for both the CX 6300 Series and CX 6400 Series?",
+    options: ["500 tunnels per switch/stack; 128 per port", "1000 tunnels per switch/stack; 256 per port", "2000 tunnels per switch/stack; 512 per port", "256 tunnels per switch/stack; 64 per port"],
+    correct: [1], explain: "Confirmed figures (1000 tunnels/switch, 256/port) for both CX 6300 and CX 6400 Series." },
+  { section: "C", src: "M9", num: "Q67", multi: false,
+    text: "What does the PyCentral SDK handle automatically that a raw, direct API call does not?",
+    options: ["Authentication and token generation/management", "VLAN tagging on trunk ports", "RADIUS server failover", "MACsec key rotation"],
+    correct: [0], explain: "The PyCentral SDK's confirmed built-in authentication/token-handling benefit." },
+  { section: "C", src: "M1", num: "Q68", multi: false,
+    text: "What command displays NAE agent and monitor usage against the platform's maximum capacity?",
+    options: ["show nae-agent", "show capacities-status nae", "show system resource-utilization", "show nae-capacity-limits"],
+    correct: [1], explain: "show capacities-status nae displays configured agents, monitors, and scripts against platform maximums." },
+  { section: "C", src: "M3", num: "Q69", multi: false,
+    text: "Route summarization must be configured where to take effect?",
+    options: ["Only on the OSPF backbone router.", "On every ABR where the summarization is desired — an ABR without the area range command continues announcing the individual, more-specific routes.", "Globally, under the OSPF process, affecting all ABRs automatically.", "Only on the ASBR that originated the routes."],
+    correct: [1], explain: "Summarization must be configured on every ABR where it's desired; an ABR without area range keeps announcing specific routes." },
+  { section: "C", src: "M1", num: "Q70", multi: false,
+    text: "What two databases feed the Network Analytics Engine (NAE)?",
+    options: ["The Time-Series Database (TSDB) and the Configuration and State Database (CSDB)", "The REST Database and the CLI Database", "The Analytics Database and the Telemetry Database", "The Sandbox Database and the Rule Database"],
+    correct: [0], explain: "The Configuration and State Database (CSDB) and Time-Series Database (TSDB) both feed NAE." },
+  { section: "C", src: "M1", num: "Q71", multi: false,
+    text: "Approximately how much storage does a single monitored time series consume per day?",
+    options: ["24 KB", "240 KB", "2.4 MB", "24 MB"],
+    correct: [1], explain: "Each time series consumes approximately 240 KB of storage per day." },
+  { section: "C", src: "M5", num: "Q72", multi: false,
+    text: "What is the key difference between a (*,G) entry and an (S,G) entry in a multicast routing table?",
+    options: ["(*,G) represents \"any source, this group\" for a shared-tree relationship, not requiring the source's address; (S,G) pairs a specific source with the group, used for shortest-path trees.", "(*,G) is used only in PIM Dense Mode; (S,G) is used only in PIM Sparse Mode.", "(*,G) requires a Rendezvous Point; (S,G) never involves a Rendezvous Point under any circumstance.", "(*,G) and (S,G) are interchangeable notations for the same table entry type."],
+    correct: [0], explain: "(*,G) represents \"any source, this group\" for a shared-tree relationship; (S,G) pairs a specific source with the group for shortest-path trees." },
+  { section: "C", src: "M3", num: "Q73", multi: false,
+    text: "In OSPF LSDB output, does a Type 3 \"Inter-area Summary\" LSA imply route summarization has been configured?",
+    options: ["Yes — Type 3 LSAs only exist when summarization is explicitly configured on an ABR.", "No — \"Summary\" here only means the LSA isn't used for that area's own topology (SPF) calculation; only Type 1 and Type 2 LSAs build an area's topology.", "Yes, but only when the ABR is also an ASBR.", "No — Type 3 LSAs are generated only when NSSA is configured."],
+    correct: [1], explain: "\"Summary\" in Type 3 LSA output only means it isn't used for that area's own SPF topology calculation." },
+  { section: "C", src: "M9", num: "Q74", multi: false,
+    text: "What are the two confirmed API call models available when using the PyCentral SDK?",
+    options: ["Structured (Typed) Calls and Direct Base Calls", "Synchronous Calls and Asynchronous Calls", "Read-Only Calls and Read-Write Calls", "Local Calls and Remote Calls"],
+    correct: [0], explain: "Structured (Typed) Calls and Direct Base Calls are the two confirmed API call models." },
+  { section: "C", src: "M9", num: "Q75", multi: false,
+    text: "In the PyCentral SDK's confirmed 5-step deployment template, what is Step 4?",
+    options: ["Instantiate the Central API client", "Define configuration data using a YAML file", "Assign the created profile to a scope and device function", "Handle errors returned by the API call"],
+    correct: [2], explain: "Step 4 is confirmed as assigning the created profile to a scope and device function." },
+];
+
+let current = 0;
+let score = 0;
+let selected = [];
+let answered = false;
+const SECTION_LABELS = {
+  A: "SECTION A — OFFICIAL SAMPLE EXAM (Ch17, verbatim)",
+  B: "SECTION B — TROUBLESHOOTING METHODOLOGY (Ch16)",
+  C: "SECTION C — RESAMPLED, MODULES 1-9 (weighted per Table 17-1)",
+};
+let sectionScores = { A: {correct:0,total:0}, B: {correct:0,total:0}, C: {correct:0,total:0} };
+QUESTIONS.forEach(q => sectionScores[q.section].total++);
+
+const els = {
+  progressText: document.getElementById('progress-text'),
+  progressFill: document.getElementById('progress-fill'),
+  scoreLive: document.getElementById('score-live'),
+  sectionTag: document.getElementById('section-tag'),
+  sourceTag: document.getElementById('source-tag'),
+  qnum: document.getElementById('qnum'),
+  qtext: document.getElementById('qtext'),
+  multiNote: document.getElementById('multi-note'),
+  options: document.getElementById('options'),
+  feedback: document.getElementById('feedback'),
+  btnSubmit: document.getElementById('btn-submit'),
+  btnNext: document.getElementById('btn-next'),
+  btnReset: document.getElementById('btn-reset'),
+  results: document.getElementById('results'),
+  quizBody: document.getElementById('quiz-body'),
+  finalScore: document.getElementById('final-score'),
+  passLabel: document.getElementById('pass-label'),
+  breakdown: document.getElementById('breakdown'),
+  btnRestart: document.getElementById('btn-restart'),
+};
+
+function renderQuestion() {
+  const q = QUESTIONS[current];
+  selected = [];
+  answered = false;
+
+  els.progressText.textContent = `Question ${current + 1} / ${QUESTIONS.length}`;
+  els.progressFill.style.width = `${((current) / QUESTIONS.length) * 100}%`;
+  els.scoreLive.textContent = `Score: ${score}`;
+  els.sectionTag.textContent = SECTION_LABELS[q.section];
+  els.sourceTag.textContent = `source: ${q.src}`;
+  els.qnum.textContent = q.num + ".";
+  els.qtext.textContent = q.text;
+  els.multiNote.style.display = q.multi ? "block" : "none";
+
+  els.options.innerHTML = "";
+  const letters = ["A","B","C","D"];
+  q.options.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = "option";
+    div.innerHTML = `<div class="letter">${letters[i]}</div><div>${opt}</div>`;
+    div.addEventListener('click', () => toggleOption(i, div));
+    els.options.appendChild(div);
+  });
+
+  els.feedback.className = "feedback";
+  els.feedback.innerHTML = "";
+  els.btnSubmit.style.display = "inline-block";
+  els.btnSubmit.disabled = true;
+  els.btnNext.style.display = "none";
+}
+
+function toggleOption(i, div) {
+  if (answered) return;
+  const q = QUESTIONS[current];
+  if (q.multi) {
+    const idx = selected.indexOf(i);
+    if (idx > -1) { selected.splice(idx, 1); div.classList.remove('selected'); }
+    else { selected.push(i); div.classList.add('selected'); }
+  } else {
+    document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+    selected = [i];
+    div.classList.add('selected');
+  }
+  els.btnSubmit.disabled = selected.length === 0;
+}
+
+function submitAnswer() {
+  if (answered || selected.length === 0) return;
+  answered = true;
+  const q = QUESTIONS[current];
+  const correctSet = new Set(q.correct);
+  const selectedSet = new Set(selected);
+  const isCorrect = correctSet.size === selectedSet.size && [...correctSet].every(v => selectedSet.has(v));
+
+  const optionDivs = document.querySelectorAll('.option');
+  optionDivs.forEach((div, i) => {
+    div.classList.add('disabled');
+    if (correctSet.has(i)) div.classList.add('correct');
+    else if (selectedSet.has(i)) div.classList.add('incorrect');
+  });
+
+  if (isCorrect) {
+    score++;
+    sectionScores[q.section].correct++;
+  }
+  els.scoreLive.textContent = `Score: ${score}`;
+
+  els.feedback.className = "feedback show " + (isCorrect ? "correct" : "incorrect");
+  els.feedback.innerHTML = `<strong>${isCorrect ? "✓ CORRECT" : "✗ INCORRECT"}</strong><br>${q.explain}`;
+
+  els.btnSubmit.style.display = "none";
+  els.btnNext.style.display = "inline-block";
+  els.btnNext.textContent = (current === QUESTIONS.length - 1) ? "view --results" : "next --question";
+}
+
+function nextQuestion() {
+  if (current === QUESTIONS.length - 1) {
+    showResults();
+    return;
+  }
+  current++;
+  renderQuestion();
+}
+
+function showResults() {
+  els.quizBody.style.display = "none";
+  els.results.classList.add('show');
+  els.finalScore.textContent = `${score} / ${QUESTIONS.length}`;
+  const pct = Math.round((score / QUESTIONS.length) * 100);
+  const passed = pct >= 68;
+  els.passLabel.textContent = passed ? `PASS (${pct}% ≥ 68% threshold)` : `BELOW PASS THRESHOLD (${pct}% < 68%)`;
+  els.passLabel.className = "pass-label " + (passed ? "pass" : "fail");
+  els.breakdown.innerHTML = `
+    <div><span class="sec-label">Overall</span><span class="sec-score">${score} / ${QUESTIONS.length} (${pct}%)</span></div>
+    <div><span class="sec-label">Section A — Official Sample Exam</span><span class="sec-score">${sectionScores.A.correct} / ${sectionScores.A.total}</span></div>
+    <div><span class="sec-label">Section B — Troubleshooting Methodology</span><span class="sec-score">${sectionScores.B.correct} / ${sectionScores.B.total}</span></div>
+    <div><span class="sec-label">Section C — Resampled, Modules 1-9</span><span class="sec-score">${sectionScores.C.correct} / ${sectionScores.C.total}</span></div>
+  `;
+}
+
+function resetAll() {
+  current = 0;
+  score = 0;
+  sectionScores = { A: {correct:0,total:0}, B: {correct:0,total:0}, C: {correct:0,total:0} };
+  QUESTIONS.forEach(q => sectionScores[q.section].total++);
+  els.results.classList.remove('show');
+  els.quizBody.style.display = "block";
+  renderQuestion();
+}
+
+els.btnSubmit.addEventListener('click', submitAnswer);
+els.btnNext.addEventListener('click', nextQuestion);
+els.btnReset.addEventListener('click', resetAll);
+els.btnRestart.addEventListener('click', resetAll);
+
+renderQuestion();
+</script>
+
+</body>
+</html>
