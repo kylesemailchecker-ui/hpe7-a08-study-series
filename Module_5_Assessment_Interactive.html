@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module 5 Assessment — IGMP &amp; Multicast Routing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1419;
+    --panel:#161D24;
+    --panel-raised:#1C242C;
+    --border:#2A333D;
+    --text:#E8ECF0;
+    --text-dim:#8B98A5;
+    --up:#3FB950;
+    --up-dim:#1C3A24;
+    --down:#F85149;
+    --down-dim:#3A1F1F;
+    --pending:#D29922;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:32px 16px 64px;
+  }
+  .app{ width:100%; max-width:840px; }
+
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:1px solid var(--border);
+    padding-bottom:14px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .masthead h1{
+    font-family:var(--mono);
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    margin:0;
+    color:var(--text);
+  }
+  .masthead h1 .dim{ color:var(--text-dim); font-weight:400; }
+  .masthead .sub{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+
+  /* Port status rail */
+  .rail{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:24px;
+    padding:14px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+  .port{
+    width:20px;
+    height:20px;
+    border-radius:3px;
+    background:#232C34;
+    border:1px solid var(--border);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--mono);
+    font-size:9px;
+    color:var(--text-dim);
+    transition:transform 0.12s ease;
+  }
+  .port:hover{ transform:translateY(-1px); }
+  .port.current{ border-color:var(--text-dim); box-shadow:0 0 0 1px var(--text-dim); }
+  .port.correct{ background:var(--up-dim); border-color:var(--up); color:var(--up); }
+  .port.incorrect{ background:var(--down-dim); border-color:var(--down); color:var(--down); }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:28px;
+  }
+  .qmeta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .qmeta .tag{
+    background:var(--panel-raised);
+    border:1px solid var(--border);
+    padding:3px 8px;
+    border-radius:4px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    font-size:10px;
+  }
+  .qtext{
+    font-size:17px;
+    line-height:1.5;
+    margin:0 0 20px;
+    font-weight:500;
+  }
+  .choices{ display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+  .choice{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    background:var(--panel-raised);
+    transition:border-color 0.12s ease, background 0.12s ease;
+  }
+  .choice:hover{ border-color:var(--text-dim); }
+  .choice.selected{ border-color:var(--pending); background:#241F14; }
+  .choice.correct{ border-color:var(--up); background:var(--up-dim); }
+  .choice.incorrect{ border-color:var(--down); background:var(--down-dim); }
+  .choice .marker{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+    width:18px;
+    flex-shrink:0;
+    padding-top:1px;
+  }
+  .choice.correct .marker, .choice.correct .ctext{ color:var(--up); }
+  .choice.incorrect .marker, .choice.incorrect .ctext{ color:var(--down); }
+  .ctext{ font-size:14.5px; line-height:1.45; }
+
+  .rationale{
+    display:none;
+    font-family:var(--sans);
+    font-size:14px;
+    line-height:1.55;
+    color:var(--text-dim);
+    background:var(--panel-raised);
+    border-left:3px solid var(--pending);
+    padding:12px 16px;
+    border-radius:0 6px 6px 0;
+    margin-bottom:20px;
+  }
+  .rationale.show{ display:block; }
+  .rationale b{ color:var(--text); }
+
+  .actions{ display:flex; justify-content:space-between; align-items:center; }
+  .btn{
+    font-family:var(--mono);
+    font-size:13px;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:var(--panel-raised);
+    color:var(--text);
+    cursor:pointer;
+    transition:border-color 0.12s ease;
+  }
+  .btn:hover:not(:disabled){ border-color:var(--text-dim); }
+  .btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  .btn.primary{ background:var(--up-dim); border-color:var(--up); color:var(--up); }
+  .btn-group{ display:flex; gap:8px; }
+
+  .hint{ font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:6px; }
+
+  .summary{ text-align:center; padding:40px 20px; }
+  .summary .score{
+    font-family:var(--mono);
+    font-size:56px;
+    font-weight:700;
+    color:var(--up);
+    line-height:1;
+  }
+  .summary .score.low{ color:var(--down); }
+  .summary .score.mid{ color:var(--pending); }
+  .summary .label{ font-family:var(--mono); font-size:13px; color:var(--text-dim); margin-top:8px; letter-spacing:0.04em; text-transform:uppercase; }
+  .summary p{ color:var(--text-dim); font-size:14px; margin-top:20px; line-height:1.6; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+  @media (max-width:520px){
+    .card{ padding:20px; }
+    .qtext{ font-size:15.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="masthead">
+    <h1>MODULE 5 <span class="dim">/ Assessment</span></h1>
+    <div class="sub" id="progressLabel">Q1 of 22</div>
+  </div>
+
+  <div class="rail" id="rail"></div>
+
+  <div class="card" id="quizCard"></div>
+</div>
+
+<script>
+const QUESTIONS = [
+{q:"What is the full Layer 3 multicast address range, and which portion is reserved for Local Subnetwork (link-local, non-routable) scope?", multi:false,
+ choices:["224.0.0.0 through 239.255.255.255 overall; 224.0.0.0\u2013224.0.0.255 is Local Subnetwork scope.","224.0.0.0 through 255.255.255.255 overall; 224.0.1.0\u2013224.0.1.255 is Local Subnetwork scope.","192.0.0.0 through 223.255.255.255 overall; 224.0.0.0\u2013224.0.0.255 is Local Subnetwork scope.","224.0.0.0 through 239.255.255.255 overall; 239.0.0.0\u2013239.255.255.255 is Local Subnetwork scope."],
+ correct:[0],
+ rationale:"224.0.0.0 through 239.255.255.255 is the full range; 224.0.0.0\u2013224.0.0.255 is Local Subnetwork (link-local, non-routable) scope."},
+
+{q:"What does 224.0.0.2 address, and what does 224.0.0.13 address?", multi:false,
+ choices:["All multicast devices; all OSPF routers.","All multicast routers; all PIM routers.","All PIM routers; all multicast devices.","The querier; the Rendezvous Point."],
+ correct:[1],
+ rationale:"224.0.0.2 addresses all multicast routers; 224.0.0.13 addresses all PIM routers."},
+
+{q:"How many IP multicast addresses map to a single multicast MAC address, and why?", multi:false,
+ choices:["Exactly 1-to-1 \u2014 every multicast IP has a unique MAC address.","32 IP addresses map to each MAC address, because only 23 of the 32 relevant IP bits map into the low-order 23 bits of the MAC address.","256 IP addresses map to each MAC address, based on the last octet only.","8 IP addresses map to each MAC address, based on a 3-bit hash."],
+ correct:[1],
+ rationale:"32 IP addresses map to each MAC address, since only 23 of the 32 relevant IP bits map into the MAC address's low-order 23 bits \u2014 the high-order 25 bits of the MAC are fixed by the IEEE-allocated block."},
+
+{q:"What is GLOP addressing, and is \u201cGLOP\u201d actually an acronym?", multi:false,
+ choices:["GLOP embeds a 16-bit Autonomous System Number into the middle two octets of the multicast address; source notes it is NOT actually an acronym despite appearing to be one.","GLOP is an acronym for \u201cGlobal Local Output Protocol,\u201d used for VXLAN multicast replication.","GLOP is the same address block as Source-Specific Multicast.","GLOP addressing is only used with IGMPv1."],
+ correct:[0],
+ rationale:"GLOP embeds a 16-bit Autonomous System Number into the middle two octets; source explicitly notes it is not actually an acronym, despite the name's appearance."},
+
+{q:"What are the four core IGMP message types confirmed in source?", multi:false,
+ choices:["Hello, Query, Report, Prune.","Query, Report, Join, Leave.","Request, Ack, Nack, Leave.","Join, Prune, Graft, Assert."],
+ correct:[1],
+ rationale:"Query, Report, Join, and Leave are the four confirmed core IGMP message types."},
+
+{q:"What does IGMPv3 add that IGMPv2 does not have?", multi:false,
+ choices:["A Leave message and querier election.","Source-Specific Query, letting a receiver request traffic from a specific source, not just a specific group.","Support for the Rendezvous Point mechanism.","Support for Spanning Tree Topology Change Notifications."],
+ correct:[1],
+ rationale:"IGMPv3 adds Source-Specific Query, letting a receiver request traffic from a specific source rather than just a group \u2014 IGMPv2 is still group-only."},
+
+{q:"On an AOS-CX switch, what determines whether PIM or the first-enabled-IGMP switch becomes the querier?", multi:false,
+ choices:["Enabling PIM on a VLAN with an IP address enables the querier by default; without PIM, the first switch on which IGMP is enabled becomes the querier.","The querier is always a manually configured, separate role unrelated to PIM or IGMP enablement order.","The switch with the highest IP address on the VLAN always becomes the querier, regardless of PIM state.","Querier election requires VRRP to be configured first, with no other path to the role."],
+ correct:[0],
+ rationale:"Enabling PIM on a VLAN with an IP address enables the querier by default; without PIM, the first switch with IGMP enabled becomes the querier."},
+
+{q:"What is Fast Learn in IGMP Snooping, and what problem does it solve?", multi:false,
+ choices:["It shortens the IGMP query interval; solves querier election delay.","It replays known Joins instead of waiting for flood/relearn, for faster response to Spanning Tree Topology Change Notifications.","It automatically enables PIM on all VLANs with active IGMP snooping.","It converts (*,G) entries to (S,G) entries faster during RPF checks."],
+ correct:[1],
+ rationale:"Fast Learn replays known Joins instead of waiting for flood/relearn, specifically for faster response to Spanning Tree Topology Change Notifications."},
+
+{q:"Is IGMP Snooping enabled by default on AOS-CX, and at what layer does it operate?", multi:false,
+ choices:["Yes, enabled by default; operates at Layer 3 per VRF.","No, disabled by default; operates at Layer 2, per VLAN.","Yes, enabled by default; operates at Layer 2, per port.","No, disabled by default; operates at Layer 3, per interface."],
+ correct:[1],
+ rationale:"IGMP Snooping is disabled by default and operates at Layer 2, configured per VLAN."},
+
+{q:"What is the key difference between a (*,G) entry and an (S,G) entry in a multicast routing table?", multi:false,
+ choices:["(*,G) represents \u201cany source, this group\u201d for a shared-tree relationship, not requiring the source's address; (S,G) pairs a specific source with the group, used for shortest-path trees.","(*,G) is used only in PIM Dense Mode; (S,G) is used only in PIM Sparse Mode.","(*,G) requires a Rendezvous Point; (S,G) never involves a Rendezvous Point under any circumstance.","(*,G) and (S,G) are interchangeable notations for the same table entry type."],
+ correct:[0],
+ rationale:"(*,G) represents \u201cany source, this group\u201d for a shared-tree relationship; (S,G) pairs a specific source with the group for shortest-path trees."},
+
+{q:"What does PIM use to prevent loops and conserve bandwidth, and how does it work?", multi:false,
+ choices:["Spanning Tree Protocol, blocking redundant multicast-carrying ports.","Reverse Path Forwarding (RPF) \u2014 a router checks its unicast routing table for the best path back toward the source, accepting the stream only on the matching interface.","A TTL-based hop-count limit applied uniformly to all multicast traffic.","BGP AS-path filtering applied to multicast group addresses."],
+ correct:[1],
+ rationale:"PIM uses Reverse Path Forwarding \u2014 checking the unicast routing table for the best reverse path toward the source, accepting the stream only on the matching interface."},
+
+{q:"What is the difference between a Source Tree (Shortest Path Tree) and a Shared Tree (Rendezvous Point Tree)?", multi:false,
+ choices:["A Source Tree is rooted at the router closest to the source, with RPF checks toward the source; a Shared Tree is rooted at the RP, with RPF checks toward the RP.","A Source Tree is used only with IGMPv2; a Shared Tree is used only with IGMPv3.","A Shared Tree requires a static route; a Source Tree requires a dynamic routing protocol.","There is no functional difference \u2014 both terms describe the same tree type."],
+ correct:[0],
+ rationale:"A Source Tree is rooted at the router closest to the source with RPF checks toward the source; a Shared Tree is rooted at the Rendezvous Point with RPF checks toward the RP."},
+
+{q:"What is the fundamental behavioral difference between PIM Dense Mode and PIM Sparse Mode?", multi:false,
+ choices:["PIM-DM forwards nothing until a Join is received (pull model); PIM-SM floods first and prunes unwanted branches (push model).","PIM-DM floods first and prunes unwanted branches (push model); PIM-SM forwards nothing until a Join is received (pull model).","PIM-DM and PIM-SM both flood by default, differing only in their prune-message format.","PIM-DM requires a Rendezvous Point; PIM-SM does not."],
+ correct:[1],
+ rationale:"PIM-DM floods first and prunes (push model); PIM-SM forwards nothing until a Join is received (pull model)."},
+
+{q:"Can a single VRF run both PIM-DM and PIM-SM concurrently on different interfaces?", multi:false,
+ choices:["Yes, freely, with no restriction.","No \u2014 a VRF runs one mode or the other, never both concurrently, and all interfaces in that VRF must match.","Yes, but only if VSX is configured.","No \u2014 PIM-DM and PIM-SM cannot coexist anywhere in the same network, even across different VRFs."],
+ correct:[1],
+ rationale:"A VRF runs PIM-DM or PIM-SM, never both concurrently \u2014 all interfaces in that VRF must match the chosen mode."},
+
+{q:"What is the default PIM-DM State Refresh interval, and what does State Refresh prevent?", multi:false,
+ choices:["Default 30 seconds; prevents duplicate (S,G) entries.","Default 60 seconds (configurable 10\u2013100); prevents unnecessary periodic re-flooding.","Default 120 seconds; prevents Rendezvous Point failover delay.","Default 10 seconds; prevents IGMP querier re-election."],
+ correct:[1],
+ rationale:"Default State Refresh interval is 60 seconds (configurable 10\u2013100), and it prevents unnecessary periodic re-flooding."},
+
+{q:"In PIM Sparse Mode's three-phase build-up process, what happens in Phase 1?", multi:false,
+ choices:["The Rendezvous Point sends a Register-Stop message to stop encapsulation.","A receiver's Last-Hop Router creates a (*,G) shared-tree entry from an IGMP Join and sends a PIM Join toward the Rendezvous Point.","The Last-Hop Router switches directly to the shortest-path tree, bypassing the Rendezvous Point entirely.","The source's First-Hop Router floods traffic to all PIM neighbors without encapsulation."],
+ correct:[1],
+ rationale:"Phase 1 (Rendezvous Point Tree): the Last-Hop Router creates a (*,G) shared-tree entry from an IGMP Join and sends a PIM Join toward the Rendezvous Point."},
+
+{q:"What is the difference between Static RP configuration and the Bootstrap Router (BSR) mechanism?", multi:false,
+ choices:["Static RP requires manually configuring the identical RP address on every router (max 8 per VRF on AOS-CX); BSR automatically distributes group-to-RP mappings via an elected Bootstrap Router collecting Candidate-RP advertisements.","Static RP is dynamic and self-electing; BSR requires manual configuration on every router.","Static RP is only usable with PIM Dense Mode; BSR is only usable with PIM Sparse Mode.","They are two names for the same static configuration method."],
+ correct:[0],
+ rationale:"Static RP requires identical manual configuration on every router (max 8 per VRF on AOS-CX); BSR automatically distributes group-to-RP mappings via an elected Bootstrap Router."},
+
+{q:"What does Anycast RP solve, and what protocol does it rely on to share source/group information among RPs?", multi:false,
+ choices:["It solves RP redundancy by assigning the same loopback address to multiple RPs, synchronized via Multicast Source Discovery Protocol (MSDP).","It solves querier redundancy by assigning the same VLAN IP to multiple switches, synchronized via VRRP.","It solves DR election ties by assigning the same priority to multiple routers, synchronized via BFD.","It solves IGMP version mismatches by forcing all hosts to IGMPv3, synchronized via SSM."],
+ correct:[0],
+ rationale:"Anycast RP solves RP redundancy via a shared loopback address across multiple RPs, synchronized using Multicast Source Discovery Protocol (MSDP)."},
+
+{q:"On a VSX pair, what is the functional difference between the active PIM Designated Router and the Proxy DR?", multi:false,
+ choices:["Only the active DR forwards multicast data-plane traffic; the Proxy DR builds identical control-plane state but keeps downstream-port entries as bridge entries, not route entries, until it takes over.","Both the DR and Proxy DR forward multicast data-plane traffic simultaneously, for full active-active redundancy.","The Proxy DR handles only IGMP; the active DR handles only PIM.","There is no meaningful difference \u2014 Proxy DR is purely a naming convention with no behavioral distinction."],
+ correct:[0],
+ rationale:"Only the active DR forwards multicast data-plane traffic; the Proxy DR maintains identical control-plane state but keeps downstream entries as bridge entries until it becomes active."},
+
+{q:"On a VSX pair, what is the difference in behavior between a DR failure and an ISL failure (with keepalive configured)?", multi:false,
+ choices:["DR failure: the Proxy DR detects loss of ISL status and immediately converts to active DR, minimal duplicate traffic. ISL failure with keepalive: the primary remains DR, with duplicate traffic expected for at least 5 seconds during downstream cutover.","DR failure and ISL failure produce identical behavior in all cases, regardless of keepalive configuration.","DR failure requires a full VSX reboot to recover; ISL failure recovers automatically with zero duplicate traffic.","Neither failure type is detectable without manually polling show ip mroute every few seconds."],
+ correct:[0],
+ rationale:"DR failure triggers fast, low-disruption failover via ISL status loss detection; ISL failure alone (with keepalive) keeps the primary as DR with at least 5 seconds of expected duplicate traffic during cutover."},
+
+{q:"Without VSX keepalive configured, what happens during an ISL failure (both switches still up)?", multi:false,
+ choices:["Both VSX peers independently become DR, causing sustained duplicate traffic because downstream VSX ports are not brought down.","Both peers immediately shut down all multicast forwarding until the ISL is restored.","The secondary peer automatically defers to the primary with zero duplicate traffic.","Multicast traffic fails over instantly with no observable disruption."],
+ correct:[0],
+ rationale:"Without keepalive, both VSX peers independently become DR, causing sustained duplicate traffic since downstream ports aren't brought down."},
+
+{q:"What are the two named IGMPv3 RFCs, and what AOS-CX default version applies?", multi:false,
+ choices:["RFC 2236 and RFC 3376; IGMPv2 is the AOS-CX default.","RFC 3376 and RFC 4604; IGMPv3 is the AOS-CX default, compatible with v1/v2 hosts on the same segment.","RFC 4601 and RFC 3973; IGMPv1 is the AOS-CX default.","RFC 5059 and RFC 4607; there is no default IGMP version on AOS-CX."],
+ correct:[1],
+ rationale:"RFC 3376 and RFC 4604 define IGMPv3; it is the AOS-CX default and remains compatible with v1/v2 hosts on the same segment."}
+];
+
+let current = 0;
+let answered = new Array(QUESTIONS.length).fill(null); // null = unanswered, else {selected:[], correct:bool}
+let selections = new Array(QUESTIONS.length).fill(null).map(()=>[]);
+
+const rail = document.getElementById('rail');
+const card = document.getElementById('quizCard');
+const progressLabel = document.getElementById('progressLabel');
+
+function buildRail(){
+  rail.innerHTML = '';
+  QUESTIONS.forEach((_, i)=>{
+    const p = document.createElement('div');
+    p.className = 'port';
+    p.textContent = i+1;
+    p.title = 'Question ' + (i+1);
+    p.addEventListener('click', ()=>{ current = i; render(); });
+    rail.appendChild(p);
+  });
+  updateRail();
+}
+
+function updateRail(){
+  const ports = rail.querySelectorAll('.port');
+  ports.forEach((p,i)=>{
+    p.classList.remove('current','correct','incorrect');
+    if(i===current) p.classList.add('current');
+    if(answered[i]) p.classList.add(answered[i].correct ? 'correct' : 'incorrect');
+  });
+}
+
+function render(){
+  const q = QUESTIONS[current];
+  const state = answered[current];
+  progressLabel.textContent = 'Q' + (current+1) + ' of ' + QUESTIONS.length;
+
+  let html = `<div class="qmeta"><span class="tag">${q.multi ? 'Select ' + q.correct.length : 'Single Response'}</span><span>#${current+1}</span></div>`;
+  html += `<p class="qtext">${q.q}</p>`;
+  html += `<div class="choices">`;
+  q.choices.forEach((c, i)=>{
+    let cls = 'choice';
+    const isSelected = selections[current].includes(i);
+    if(state){
+      if(q.correct.includes(i)) cls += ' correct';
+      else if(isSelected) cls += ' incorrect';
+    } else if(isSelected){
+      cls += ' selected';
+    }
+    html += `<div class="${cls}" data-idx="${i}"><span class="marker">${String.fromCharCode(65+i)}</span><span class="ctext">${c}</span></div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="rationale${state ? ' show' : ''}"><b>Rationale:</b> ${q.rationale}</div>`;
+
+  html += `<div class="actions">`;
+  html += `<div class="btn-group">`;
+  html += `<button class="btn" id="prevBtn" ${current===0?'disabled':''}>&larr; Prev</button>`;
+  html += `<button class="btn" id="nextBtn" ${current===QUESTIONS.length-1?'disabled':''}>Next &rarr;</button>`;
+  html += `</div>`;
+  if(!state){
+    html += `<button class="btn primary" id="checkBtn">Check answer</button>`;
+  } else {
+    html += `<button class="btn" id="finishBtn">${allAnswered() ? 'View score' : 'Continue'}</button>`;
+  }
+  html += `</div>`;
+
+  card.innerHTML = html;
+
+  card.querySelectorAll('.choice').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      if(answered[current]) return;
+      const idx = parseInt(el.dataset.idx);
+      if(q.multi){
+        const pos = selections[current].indexOf(idx);
+        if(pos>-1) selections[current].splice(pos,1);
+        else selections[current].push(idx);
+      } else {
+        selections[current] = [idx];
+      }
+      render();
+    });
+  });
+
+  const checkBtn = document.getElementById('checkBtn');
+  if(checkBtn){
+    checkBtn.addEventListener('click', ()=>{
+      if(selections[current].length===0) return;
+      const sel = [...selections[current]].sort();
+      const cor = [...q.correct].sort();
+      const isCorrect = JSON.stringify(sel)===JSON.stringify(cor);
+      answered[current] = {selected:sel, correct:isCorrect};
+      updateRail();
+      render();
+    });
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', ()=>{ if(current>0){ current--; render(); }});
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ if(current<QUESTIONS.length-1){ current++; render(); }});
+
+  const finishBtn = document.getElementById('finishBtn');
+  if(finishBtn){
+    finishBtn.addEventListener('click', ()=>{
+      if(allAnswered()) showSummary();
+      else if(current<QUESTIONS.length-1){ current++; render(); }
+    });
+  }
+}
+
+function allAnswered(){
+  return answered.every(a=>a!==null);
+}
+
+function showSummary(){
+  const correctCount = answered.filter(a=>a.correct).length;
+  const pct = Math.round((correctCount/QUESTIONS.length)*100);
+  let scoreClass = 'score';
+  if(pct < 60) scoreClass += ' low';
+  else if(pct < 80) scoreClass += ' mid';
+
+  card.innerHTML = `
+    <div class="summary">
+      <div class="${scoreClass}">${pct}%</div>
+      <div class="label">${correctCount} of ${QUESTIONS.length} correct</div>
+      <p>Real exam passing score is 68%. Review any missed items in Module_5_Assessment.md for full rationale, then revisit the Concepts Overview or Technical Mastery doc for that pillar.</p>
+      <div class="btn-group" style="justify-content:center; margin-top:20px;">
+        <button class="btn primary" id="restartBtn">Restart quiz</button>
+      </div>
+    </div>`;
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    answered = new Array(QUESTIONS.length).fill(null);
+    selections = new Array(QUESTIONS.length).fill(null).map(()=>[]);
+    current = 0;
+    buildRail();
+    render();
+  });
+}
+
+buildRail();
+render();
+</script>
+</body>
+</html>

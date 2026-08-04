@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module 2 Assessment — VSX &amp; Layer 2 Optimization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1419;
+    --panel:#161D24;
+    --panel-raised:#1C242C;
+    --border:#2A333D;
+    --text:#E8ECF0;
+    --text-dim:#8B98A5;
+    --up:#3FB950;
+    --up-dim:#1C3A24;
+    --down:#F85149;
+    --down-dim:#3A1F1F;
+    --pending:#D29922;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:32px 16px 64px;
+  }
+  .app{ width:100%; max-width:840px; }
+
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:1px solid var(--border);
+    padding-bottom:14px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .masthead h1{
+    font-family:var(--mono);
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    margin:0;
+    color:var(--text);
+  }
+  .masthead h1 .dim{ color:var(--text-dim); font-weight:400; }
+  .masthead .sub{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+
+  /* Port status rail */
+  .rail{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:24px;
+    padding:14px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+  .port{
+    width:20px;
+    height:20px;
+    border-radius:3px;
+    background:#232C34;
+    border:1px solid var(--border);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--mono);
+    font-size:9px;
+    color:var(--text-dim);
+    transition:transform 0.12s ease;
+  }
+  .port:hover{ transform:translateY(-1px); }
+  .port.current{ border-color:var(--text-dim); box-shadow:0 0 0 1px var(--text-dim); }
+  .port.correct{ background:var(--up-dim); border-color:var(--up); color:var(--up); }
+  .port.incorrect{ background:var(--down-dim); border-color:var(--down); color:var(--down); }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:28px;
+  }
+  .qmeta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .qmeta .tag{
+    background:var(--panel-raised);
+    border:1px solid var(--border);
+    padding:3px 8px;
+    border-radius:4px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    font-size:10px;
+  }
+  .qtext{
+    font-size:17px;
+    line-height:1.5;
+    margin:0 0 20px;
+    font-weight:500;
+  }
+  .choices{ display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+  .choice{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    background:var(--panel-raised);
+    transition:border-color 0.12s ease, background 0.12s ease;
+  }
+  .choice:hover{ border-color:var(--text-dim); }
+  .choice.selected{ border-color:var(--pending); background:#241F14; }
+  .choice.correct{ border-color:var(--up); background:var(--up-dim); }
+  .choice.incorrect{ border-color:var(--down); background:var(--down-dim); }
+  .choice .marker{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+    width:18px;
+    flex-shrink:0;
+    padding-top:1px;
+  }
+  .choice.correct .marker, .choice.correct .ctext{ color:var(--up); }
+  .choice.incorrect .marker, .choice.incorrect .ctext{ color:var(--down); }
+  .ctext{ font-size:14.5px; line-height:1.45; }
+
+  .rationale{
+    display:none;
+    font-family:var(--sans);
+    font-size:14px;
+    line-height:1.55;
+    color:var(--text-dim);
+    background:var(--panel-raised);
+    border-left:3px solid var(--pending);
+    padding:12px 16px;
+    border-radius:0 6px 6px 0;
+    margin-bottom:20px;
+  }
+  .rationale.show{ display:block; }
+  .rationale b{ color:var(--text); }
+
+  .actions{ display:flex; justify-content:space-between; align-items:center; }
+  .btn{
+    font-family:var(--mono);
+    font-size:13px;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:var(--panel-raised);
+    color:var(--text);
+    cursor:pointer;
+    transition:border-color 0.12s ease;
+  }
+  .btn:hover:not(:disabled){ border-color:var(--text-dim); }
+  .btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  .btn.primary{ background:var(--up-dim); border-color:var(--up); color:var(--up); }
+  .btn-group{ display:flex; gap:8px; }
+
+  .hint{ font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:6px; }
+
+  .summary{ text-align:center; padding:40px 20px; }
+  .summary .score{
+    font-family:var(--mono);
+    font-size:56px;
+    font-weight:700;
+    color:var(--up);
+    line-height:1;
+  }
+  .summary .score.low{ color:var(--down); }
+  .summary .score.mid{ color:var(--pending); }
+  .summary .label{ font-family:var(--mono); font-size:13px; color:var(--text-dim); margin-top:8px; letter-spacing:0.04em; text-transform:uppercase; }
+  .summary p{ color:var(--text-dim); font-size:14px; margin-top:20px; line-height:1.6; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+  @media (max-width:520px){
+    .card{ padding:20px; }
+    .qtext{ font-size:15.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="masthead">
+    <h1>MODULE 2 <span class="dim">/ Assessment</span></h1>
+    <div class="sub" id="progressLabel">Q1 of 24</div>
+  </div>
+
+  <div class="rail" id="rail"></div>
+
+  <div class="card" id="quizCard"></div>
+</div>
+
+<script>
+const QUESTIONS = [
+{q:"What is the core architectural distinction between VSX and VSF?", multi:false,
+ choices:["VSF keeps control and management planes independent per switch, synchronized; VSX centralizes them into a single logical switch.",
+  "VSX keeps control and management planes independent per switch, synchronized; VSF centralizes them into a single logical switch.",
+  "Both VSX and VSF require every member switch to run an identical AOS-CX software version at all times.",
+  "VSX is supported only on the CX 6200 and CX 6300 Series."],
+ correct:[1],
+ rationale:"VSX keeps control/management planes independent per switch and synchronized; VSF centralizes them into a single logical switch. Option A reverses the real distinction; C is false since VSX's whole value proposition is tolerating mismatched OS versions; D is actually VSF's platform support, misapplied here."},
+
+{q:"A network engineer needs two switches to run different AOS-CX software versions during a near-zero-downtime upgrade. Which technology supports this, and why?", multi:false,
+ choices:["VSF, because its centralized control plane tolerates version mismatches.",
+  "VSX, because its independent, synchronized control/management planes allow switches to run different OS versions with near-zero downtime.",
+  "Neither technology supports mismatched OS versions during an upgrade.",
+  "This requires disabling vsx-sync vsx-global first."],
+ correct:[1],
+ rationale:"VSX's independent, synchronized control/management planes are exactly what allow mismatched OS versions with near-zero downtime &mdash; VSF requires matching OS versions across all members."},
+
+{q:"What are the confirmed default hello and dead intervals for ISLP (the protocol running over the Inter-Switch Link)?", multi:false,
+ choices:["Hello 1 second, dead 3 seconds","Hello 1 second, dead 20 seconds","Hello 5 seconds, dead 15 seconds","Hello 3 seconds, dead 9 seconds"],
+ correct:[1],
+ rationale:"ISLP's confirmed defaults are hello 1 second, dead 20 seconds."},
+
+{q:"What are the confirmed default hello and dead intervals, and UDP port, for the VSX keepalive mechanism?", multi:false,
+ choices:["Hello 1 second, dead 20 seconds, UDP port 7678","Hello 1 second, dead 3 seconds, UDP port 7678","Hello 1 second, dead 3 seconds, UDP port 6343","Hello 5 seconds, dead 15 seconds, UDP port 179"],
+ correct:[1],
+ rationale:"The VSX keepalive's confirmed defaults are hello 1 second, dead 3 seconds, over UDP port 7678. Option C substitutes the real sFlow port 6343 from a different module, misapplied here; D substitutes BGP's port 179."},
+
+{q:"Why must VSX keepalive traffic avoid the Inter-Switch Link (ISL) path?", multi:false,
+ choices:["The ISL only carries ISLP traffic, not general IP traffic.",
+  "Because the keepalive's entire purpose is to detect split-brain — if it ran over the ISL, it couldn't detect an ISL failure.",
+  "The ISL is capped at 1 Gbps and cannot carry keepalive overhead.",
+  "Keepalive traffic requires a routed-only port, and the ISL is always a switched port."],
+ correct:[1],
+ rationale:"The keepalive's entire purpose is split-brain detection; routing it over the ISL would defeat that purpose, since an ISL failure is exactly the scenario it needs to detect independently."},
+
+{q:"Which interface type is recommended as the VSX keepalive source for the best stability, and why?", multi:false,
+ choices:["The ISL itself, since it's already a trusted path between peers.",
+  "A loopback interface, since it isn't tied to the state of any single physical link.",
+  "An interface excluded via vsx-sync-exclude, since sync exclusion also isolates keepalive traffic from configuration changes.",
+  "Any VSX-LAG interface, since those already carry redundant paths."],
+ correct:[1],
+ rationale:"A loopback interface is recommended for best stability, since it isn't tied to a single physical link's state. vsx-sync-exclude is a real VSX command, but it governs configuration synchronization scope, not keepalive source selection &mdash; a genuine term misapplied to the wrong purpose."},
+
+{q:"What is the mutually-exclusive relationship between Active Gateway and Active-Forwarding?", multi:false,
+ choices:["They cannot both be enabled on the same SVI — Active Gateway serves end-host-facing VLANs, Active-Forwarding serves transit/upstream-facing VLANs.",
+  "Active-Forwarding is simply an older name for Active Gateway; only one can exist per VSX pair.",
+  "Active Gateway requires Active-Forwarding to be enabled first on the same SVI.",
+  "They serve identical purposes and can be freely substituted for each other."],
+ correct:[0],
+ rationale:"Active Gateway (end-host-facing) and Active-Forwarding (transit/upstream-facing) are mutually exclusive on the same SVI."},
+
+{q:"How many virtual MAC addresses does Active Gateway support per switch, and how are they divided?", multi:false,
+ choices:["8 total, shared between IPv4 and IPv6.","16 total — 8 for IPv4 and 8 for IPv6, not shareable between address families.","32 total, matching the maximum number of primary VLANs.","Unlimited, as long as each has a unique virtual IP."],
+ correct:[1],
+ rationale:"16 virtual MACs total per switch &mdash; 8 for IPv4 and 8 for IPv6, not shareable between address families."},
+
+{q:"What is the default link-up delay timer after a VSX switch reboots, and what is the configurable maximum?", multi:false,
+ choices:["Default 60 seconds, maximum 180 seconds.","Default 180 seconds, maximum 600 seconds.","Default 20 seconds, maximum 180 seconds.","Default 300 seconds, maximum 900 seconds."],
+ correct:[1],
+ rationale:"Default 180 seconds, configurable up to a maximum of 600 seconds."},
+
+{q:"In VSX configuration synchronization, where must changes be made for a feature that is opted into vsx-sync?", multi:false,
+ choices:["On the secondary switch only — changes automatically propagate backward to the primary.",
+  "On the primary switch only — changes made directly on the secondary for a synced feature are silently overwritten by the next sync.",
+  "On either switch interchangeably, since vsx-sync merges changes bidirectionally.",
+  "Changes must be made identically and simultaneously on both switches."],
+ correct:[1],
+ rationale:"Changes for a synced feature must be made on the primary switch only &mdash; direct secondary-switch changes to a synced feature are silently overwritten by the next sync."},
+
+{q:"Which platforms are confirmed to support VSX, per the VSG excerpt?", multi:false,
+ choices:["CX 6200 and CX 6300 only.","CX 6400, 8100, 8320, 8325, 8360, 8400, and 9300.","Every AOS-CX platform without exception.","Only the CX 8000-series family."],
+ correct:[1],
+ rationale:"CX 6400, 8100, 8320, 8325, 8360, 8400, and 9300 are the confirmed VSX-supported platforms. Option A is VSF's platform support, misapplied here."},
+
+{q:"What is the default LAG hashing algorithm on AOS-CX?", multi:false,
+ choices:["l2-src-dst","l3-src-dst","l4-src-dst","There is no default; it must always be manually configured."],
+ correct:[1],
+ rationale:"l3-src-dst is the default LAG hashing algorithm."},
+
+{q:"What does LACP Fallback enable, and what warning does the switch display when it's configured?", multi:false,
+ choices:["It enables a LAG port to stay active without received LACP messages, supporting Zero-Touch Provisioning; the switch warns it “may result in a network loop.”",
+  "It enables automatic LACP renegotiation every 30 seconds; no warning is displayed.",
+  "It disables LACP entirely in favor of static LAG member selection; the switch warns about reduced bandwidth.",
+  "It enables LACP to synchronize with UDLD state; the switch warns about UDLD conflicts."],
+ correct:[0],
+ rationale:"LACP Fallback keeps a LAG port active without received LACP messages (for Zero-Touch Provisioning), and the switch explicitly warns this “may result in a network loop.”"},
+
+{q:"What is UDLD's default operating mode, default packet transmission interval, and default retry count?", multi:false,
+ choices:["RFC 5171 aggressive; 5000 ms; 3 retries.","Aruba-OS forward-then-verify; 7000 ms; 4 retries.","Aruba-OS verify-then-forward; 3000 ms; 5 retries.","RFC 5171 normal; 10000 ms; 2 retries."],
+ correct:[1],
+ rationale:"UDLD's confirmed defaults are Aruba-OS forward-then-verify mode, 7000 ms interval, 4 retries."},
+
+{q:"Which UDLD modes should be used when interconnecting with third-party switches? (Select two.)", multi:true,
+ choices:["Aruba-OS verify-then-forward","Aruba-OS forward-then-verify","RFC 5171 aggressive","RFC 5171 normal"],
+ correct:[2,3],
+ rationale:"The RFC 5171 modes (aggressive and normal) are for interconnecting with third-party switches; the Aruba-OS-specific modes are for HPE-to-HPE links."},
+
+{q:"In a Private VLAN, what is the key difference between an Isolated secondary VLAN and a Community secondary VLAN?", multi:false,
+ choices:["Isolated VLAN hosts can talk to each other; Community VLAN hosts cannot.",
+  "Isolated VLAN hosts can only reach the primary VLAN, not each other; Community VLAN hosts can reach each other and the primary VLAN.",
+  "There is no functional difference — both terms describe the same secondary VLAN type.",
+  "Isolated VLANs require a promiscuous port; Community VLANs do not."],
+ correct:[1],
+ rationale:"Isolated VLAN hosts can reach only the primary VLAN, not each other; Community VLAN hosts can reach each other (within the community) and the primary VLAN."},
+
+{q:"What is a promiscuous port in a Private VLAN architecture?", multi:false,
+ choices:["A port on a secondary VLAN that can reach only other secondary VLAN ports.",
+  "A port on the primary VLAN that can talk to all ports of the primary and all associated secondary VLANs — typically an uplink to a router or firewall.",
+  "Any port with LACP Fallback enabled.",
+  "A port that has UDLD disabled."],
+ correct:[1],
+ rationale:"A promiscuous port sits on the primary VLAN and can reach all primary and associated secondary VLAN ports &mdash; typically an uplink to a router or firewall."},
+
+{q:"What is the standard limit on secondary VLANs per line card, and which platform has a lower exception limit?", multi:false,
+ choices:["256 standard; the CX 6400 Series is limited to 12.","512 standard; the CX 10000 Series is limited to 24.","1024 standard; the CX 8325 Series is limited to 64.","There is no documented limit on secondary VLANs per line card."],
+ correct:[1],
+ rationale:"512 secondary VLANs per line card is the standard limit; the CX 10000 Series is the confirmed exception, limited to 24."},
+
+{q:"What extra step does a VSX pair require when configuring a Private VLAN, that the Chapter 3 text itself does not mention?", multi:false,
+ choices:["Disabling vsx-sync vsx-global before applying any PVLAN command.",
+  "Issuing vsx-sync inside the same VLAN context after the private-vlan command — confirmed only in the lab transcript, not the chapter.",
+  "Configuring Active Gateway on the primary VLAN's SVI first.",
+  "Applying LACP Fallback to the promiscuous port."],
+ correct:[1],
+ rationale:"Issuing vsx-sync inside the same VLAN context after the private-vlan command is required on VSX pairs, per the lab transcript &mdash; the chapter text itself does not mention this."},
+
+{q:"What is the key functional difference between MSTP and RPVST+?", multi:false,
+ choices:["MSTP is VLAN-aware, creating one spanning tree per VLAN; RPVST+ maps groups of VLANs to a smaller number of instances.",
+  "MSTP maps groups of VLANs to a smaller number of spanning-tree instances (not VLAN-aware); RPVST+ creates one full spanning tree per VLAN (VLAN-aware).",
+  "MSTP and RPVST+ are functionally identical — only the CLI syntax differs.",
+  "RPVST+ requires a VSX pair; MSTP does not."],
+ correct:[1],
+ rationale:"MSTP is not VLAN-aware and maps VLAN groups to a smaller number of instances; RPVST+ is VLAN-aware, creating one tree per VLAN. Option A reverses the real distinction."},
+
+{q:"When AOS-CX interoperates with a third-party switch running PVST+ via RPVST+, what is true of the resulting topology?", multi:false,
+ choices:["It becomes one unified topology for all VLANs.","It becomes heterogeneous — not one topology for all VLANs.","AOS-CX cannot interoperate with PVST+ switches under any protocol.","The third-party switch must be reconfigured to run MSTP instead."],
+ correct:[1],
+ rationale:"The resulting topology is heterogeneous when AOS-CX interoperates with third-party PVST+ via RPVST+ &mdash; not one unified topology for all VLANs."},
+
+{q:"What is the key behavioral difference between Root Guard and BPDU Guard when each is triggered?", multi:false,
+ choices:["Root Guard disables the port outright (Disabled Bpdu-Error); BPDU Guard transitions to Root-Inconsistent and auto-recovers.",
+  "Root Guard transitions the port to Root-Inconsistent and auto-recovers once superior BPDUs stop; BPDU Guard disables the port outright (Disabled Bpdu-Error), requiring a timeout or manual re-enable.",
+  "Both features respond identically — disabling the port until manually re-enabled.",
+  "Root Guard and BPDU Guard can only be applied to LAG interfaces, never single ports."],
+ correct:[1],
+ rationale:"Root Guard transitions to Root-Inconsistent and auto-recovers once superior BPDUs stop; BPDU Guard disables the port outright, requiring a timeout or manual re-enable."},
+
+{q:"What does BPDU Filter do, and why is it considered riskier than BPDU Guard for general use?", multi:false,
+ choices:["It makes the interface ignore received BPDUs and stop sending its own, removing STP loop protection from that interface entirely — appropriate mainly for narrow multi-tenant scenarios, not general hardening.",
+  "It filters out only malformed BPDUs while still processing valid ones, making it strictly safer than BPDU Guard.",
+  "It disables the interface immediately upon receiving any BPDU, identical to BPDU Guard's behavior.",
+  "It requires Loop Protect to be disabled first, creating a dependency risk."],
+ correct:[0],
+ rationale:"BPDU Filter removes STP protection from the interface entirely by ignoring/not sending BPDUs &mdash; appropriate mainly for multi-tenant scenarios, not general-purpose hardening."},
+
+{q:"Where should Loop Protect be enabled, and where should it specifically be avoided, per VSG design guidance?", multi:false,
+ choices:["Enable on uplinks and core interfaces; avoid on access-layer ports.",
+  "Enable on all access-layer ports; avoid on uplinks and core/aggregation/collapsed-core interfaces.",
+  "Enable everywhere uniformly, including all uplinks and access ports.",
+  "Loop Protect is only supported on VSX-LAG interfaces."],
+ correct:[1],
+ rationale:"Loop Protect should be enabled on all access-layer ports and specifically avoided on uplinks and core/aggregation/collapsed-core interfaces, per VSG design guidance."}
+];
+
+let current = 0;
+let answered = new Array(QUESTIONS.length).fill(null); // null = unanswered, else {selected:[], correct:bool}
+let selections = new Array(QUESTIONS.length).fill(null).map(()=>[]);
+
+const rail = document.getElementById('rail');
+const card = document.getElementById('quizCard');
+const progressLabel = document.getElementById('progressLabel');
+
+function buildRail(){
+  rail.innerHTML = '';
+  QUESTIONS.forEach((_, i)=>{
+    const p = document.createElement('div');
+    p.className = 'port';
+    p.textContent = i+1;
+    p.title = 'Question ' + (i+1);
+    p.addEventListener('click', ()=>{ current = i; render(); });
+    rail.appendChild(p);
+  });
+  updateRail();
+}
+
+function updateRail(){
+  const ports = rail.querySelectorAll('.port');
+  ports.forEach((p,i)=>{
+    p.classList.remove('current','correct','incorrect');
+    if(i===current) p.classList.add('current');
+    if(answered[i]) p.classList.add(answered[i].correct ? 'correct' : 'incorrect');
+  });
+}
+
+function render(){
+  const q = QUESTIONS[current];
+  const state = answered[current];
+  progressLabel.textContent = 'Q' + (current+1) + ' of ' + QUESTIONS.length;
+
+  let html = `<div class="qmeta"><span class="tag">${q.multi ? 'Select ' + q.correct.length : 'Single Response'}</span><span>#${current+1}</span></div>`;
+  html += `<p class="qtext">${q.q}</p>`;
+  html += `<div class="choices">`;
+  q.choices.forEach((c, i)=>{
+    let cls = 'choice';
+    const isSelected = selections[current].includes(i);
+    if(state){
+      if(q.correct.includes(i)) cls += ' correct';
+      else if(isSelected) cls += ' incorrect';
+    } else if(isSelected){
+      cls += ' selected';
+    }
+    html += `<div class="${cls}" data-idx="${i}"><span class="marker">${String.fromCharCode(65+i)}</span><span class="ctext">${c}</span></div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="rationale${state ? ' show' : ''}"><b>Rationale:</b> ${q.rationale}</div>`;
+
+  html += `<div class="actions">`;
+  html += `<div class="btn-group">`;
+  html += `<button class="btn" id="prevBtn" ${current===0?'disabled':''}>&larr; Prev</button>`;
+  html += `<button class="btn" id="nextBtn" ${current===QUESTIONS.length-1?'disabled':''}>Next &rarr;</button>`;
+  html += `</div>`;
+  if(!state){
+    html += `<button class="btn primary" id="checkBtn">Check answer</button>`;
+  } else {
+    html += `<button class="btn" id="finishBtn">${allAnswered() ? 'View score' : 'Continue'}</button>`;
+  }
+  html += `</div>`;
+
+  card.innerHTML = html;
+
+  card.querySelectorAll('.choice').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      if(answered[current]) return;
+      const idx = parseInt(el.dataset.idx);
+      if(q.multi){
+        const pos = selections[current].indexOf(idx);
+        if(pos>-1) selections[current].splice(pos,1);
+        else selections[current].push(idx);
+      } else {
+        selections[current] = [idx];
+      }
+      render();
+    });
+  });
+
+  const checkBtn = document.getElementById('checkBtn');
+  if(checkBtn){
+    checkBtn.addEventListener('click', ()=>{
+      if(selections[current].length===0) return;
+      const sel = [...selections[current]].sort();
+      const cor = [...q.correct].sort();
+      const isCorrect = JSON.stringify(sel)===JSON.stringify(cor);
+      answered[current] = {selected:sel, correct:isCorrect};
+      updateRail();
+      render();
+    });
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', ()=>{ if(current>0){ current--; render(); }});
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ if(current<QUESTIONS.length-1){ current++; render(); }});
+
+  const finishBtn = document.getElementById('finishBtn');
+  if(finishBtn){
+    finishBtn.addEventListener('click', ()=>{
+      if(allAnswered()) showSummary();
+      else if(current<QUESTIONS.length-1){ current++; render(); }
+    });
+  }
+}
+
+function allAnswered(){
+  return answered.every(a=>a!==null);
+}
+
+function showSummary(){
+  const correctCount = answered.filter(a=>a.correct).length;
+  const pct = Math.round((correctCount/QUESTIONS.length)*100);
+  let scoreClass = 'score';
+  if(pct < 60) scoreClass += ' low';
+  else if(pct < 80) scoreClass += ' mid';
+
+  card.innerHTML = `
+    <div class="summary">
+      <div class="${scoreClass}">${pct}%</div>
+      <div class="label">${correctCount} of ${QUESTIONS.length} correct</div>
+      <p>Real exam passing score is 68%. Review any missed items in Module_2_Assessment.md for full rationale, then revisit the Concepts Overview or Technical Mastery doc for that pillar.</p>
+      <div class="btn-group" style="justify-content:center; margin-top:20px;">
+        <button class="btn primary" id="restartBtn">Restart quiz</button>
+      </div>
+    </div>`;
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    answered = new Array(QUESTIONS.length).fill(null);
+    selections = new Array(QUESTIONS.length).fill(null).map(()=>[]);
+    current = 0;
+    buildRail();
+    render();
+  });
+}
+
+buildRail();
+render();
+</script>
+</body>
+</html>

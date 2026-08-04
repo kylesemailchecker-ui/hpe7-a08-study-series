@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module 4 Assessment — Border Gateway Protocol (BGP)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1419;
+    --panel:#161D24;
+    --panel-raised:#1C242C;
+    --border:#2A333D;
+    --text:#E8ECF0;
+    --text-dim:#8B98A5;
+    --up:#3FB950;
+    --up-dim:#1C3A24;
+    --down:#F85149;
+    --down-dim:#3A1F1F;
+    --pending:#D29922;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:32px 16px 64px;
+  }
+  .app{ width:100%; max-width:840px; }
+
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:1px solid var(--border);
+    padding-bottom:14px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .masthead h1{
+    font-family:var(--mono);
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    margin:0;
+    color:var(--text);
+  }
+  .masthead h1 .dim{ color:var(--text-dim); font-weight:400; }
+  .masthead .sub{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+
+  /* Port status rail */
+  .rail{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:24px;
+    padding:14px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+  .port{
+    width:20px;
+    height:20px;
+    border-radius:3px;
+    background:#232C34;
+    border:1px solid var(--border);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--mono);
+    font-size:9px;
+    color:var(--text-dim);
+    transition:transform 0.12s ease;
+  }
+  .port:hover{ transform:translateY(-1px); }
+  .port.current{ border-color:var(--text-dim); box-shadow:0 0 0 1px var(--text-dim); }
+  .port.correct{ background:var(--up-dim); border-color:var(--up); color:var(--up); }
+  .port.incorrect{ background:var(--down-dim); border-color:var(--down); color:var(--down); }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:28px;
+  }
+  .qmeta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .qmeta .tag{
+    background:var(--panel-raised);
+    border:1px solid var(--border);
+    padding:3px 8px;
+    border-radius:4px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    font-size:10px;
+  }
+  .qtext{
+    font-size:17px;
+    line-height:1.5;
+    margin:0 0 20px;
+    font-weight:500;
+  }
+  .choices{ display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+  .choice{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    background:var(--panel-raised);
+    transition:border-color 0.12s ease, background 0.12s ease;
+  }
+  .choice:hover{ border-color:var(--text-dim); }
+  .choice.selected{ border-color:var(--pending); background:#241F14; }
+  .choice.correct{ border-color:var(--up); background:var(--up-dim); }
+  .choice.incorrect{ border-color:var(--down); background:var(--down-dim); }
+  .choice .marker{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+    width:18px;
+    flex-shrink:0;
+    padding-top:1px;
+  }
+  .choice.correct .marker, .choice.correct .ctext{ color:var(--up); }
+  .choice.incorrect .marker, .choice.incorrect .ctext{ color:var(--down); }
+  .ctext{ font-size:14.5px; line-height:1.45; }
+
+  .rationale{
+    display:none;
+    font-family:var(--sans);
+    font-size:14px;
+    line-height:1.55;
+    color:var(--text-dim);
+    background:var(--panel-raised);
+    border-left:3px solid var(--pending);
+    padding:12px 16px;
+    border-radius:0 6px 6px 0;
+    margin-bottom:20px;
+  }
+  .rationale.show{ display:block; }
+  .rationale b{ color:var(--text); }
+
+  .actions{ display:flex; justify-content:space-between; align-items:center; }
+  .btn{
+    font-family:var(--mono);
+    font-size:13px;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:var(--panel-raised);
+    color:var(--text);
+    cursor:pointer;
+    transition:border-color 0.12s ease;
+  }
+  .btn:hover:not(:disabled){ border-color:var(--text-dim); }
+  .btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  .btn.primary{ background:var(--up-dim); border-color:var(--up); color:var(--up); }
+  .btn-group{ display:flex; gap:8px; }
+
+  .hint{ font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:6px; }
+
+  .summary{ text-align:center; padding:40px 20px; }
+  .summary .score{
+    font-family:var(--mono);
+    font-size:56px;
+    font-weight:700;
+    color:var(--up);
+    line-height:1;
+  }
+  .summary .score.low{ color:var(--down); }
+  .summary .score.mid{ color:var(--pending); }
+  .summary .label{ font-family:var(--mono); font-size:13px; color:var(--text-dim); margin-top:8px; letter-spacing:0.04em; text-transform:uppercase; }
+  .summary p{ color:var(--text-dim); font-size:14px; margin-top:20px; line-height:1.6; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+  @media (max-width:520px){
+    .card{ padding:20px; }
+    .qtext{ font-size:15.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="masthead">
+    <h1>MODULE 4 <span class="dim">/ Assessment</span></h1>
+    <div class="sub" id="progressLabel">Q1 of 24</div>
+  </div>
+
+  <div class="rail" id="rail"></div>
+
+  <div class="card" id="quizCard"></div>
+</div>
+
+<script>
+const QUESTIONS = [
+{q:"What kind of routing protocol is BGP, and what does it track to determine the best path?", multi:false,
+ choices:["A distance-vector protocol that tracks hop count.","A path vector protocol that tracks the sequence of Autonomous Systems a route has traversed.","A link-state protocol that tracks link cost and builds a shared topology database.","A hybrid protocol that tracks both hop count and link bandwidth."],
+ correct:[1],
+ rationale:"BGP is a path vector protocol that tracks the sequence of Autonomous Systems a route has traversed, not simple hop count."},
+
+{q:"What is the core distinction between internal BGP (iBGP) and external BGP (eBGP)?", multi:false,
+ choices:["iBGP connects neighbors in different Autonomous Systems; eBGP connects neighbors in the same Autonomous System.","iBGP connects neighbors in the same Autonomous System; eBGP connects neighbors in different Autonomous Systems.","iBGP and eBGP are two names for the same peering relationship.","iBGP requires a direct Layer 2 connection; eBGP does not."],
+ correct:[1],
+ rationale:"Internal BGP (iBGP) connects neighbors in the same Autonomous System; external BGP (eBGP) connects neighbors in different Autonomous Systems."},
+
+{q:"Why does internal BGP require a full mesh of peerings within an Autonomous System?", multi:false,
+ choices:["Because internal BGP routers do not, by default, re-advertise routes learned from one internal peer to other internal peers.","Because internal BGP sessions cannot use TCP port 179.","Because internal BGP requires every router to run the same IGP.","Because internal BGP has a hard limit of two peers per router."],
+ correct:[0],
+ rationale:"Internal BGP routers do not, by default, re-advertise routes learned from one internal peer onward to other internal peers \u2014 this is exactly why the full-mesh requirement exists."},
+
+{q:"By default, must external BGP peers be directly connected, and what enforces this?", multi:false,
+ choices:["No \u2014 external BGP always assumes multihop by default.","Yes \u2014 enforced via a Time to Live (TTL) of 1, unless multihop is configured.","Yes \u2014 enforced via the bgp fast-external-fallover command specifically.","No \u2014 this restriction only applies to internal BGP."],
+ correct:[1],
+ rationale:"External BGP peers must be directly connected by default, enforced via a TTL of 1, unless multihop is explicitly configured."},
+
+{q:"What are the default BGP keepalive and hold-down timer values?", multi:false,
+ choices:["Keepalive 30 seconds, hold-down 90 seconds.","Keepalive 60 seconds, hold-down 180 seconds.","Keepalive 10 seconds, hold-down 40 seconds.","Keepalive 5 seconds, hold-down 15 seconds."],
+ correct:[1],
+ rationale:"Default keepalive is 60 seconds, default hold-down is 180 seconds (three times the keepalive interval) \u2014 confirmed identically across the textbook and lab."},
+
+{q:"What is the correct order of the BGP connection state machine?", multi:false,
+ choices:["Idle, Connect, Active, OpenSent, OpenConfirm, Established.","Idle, Active, Connect, Established, OpenSent, OpenConfirm.","Connect, Idle, OpenSent, Active, OpenConfirm, Established.","Idle, OpenSent, Connect, Active, OpenConfirm, Established."],
+ correct:[0],
+ rationale:"Idle, then Connect, then Active, then OpenSent, then OpenConfirm, then Established."},
+
+{q:"What must be enabled for BFD to actually protect a BGP session, and what happens if only one is done?", multi:false,
+ choices:["Only the neighbor-level fall-over bfd command is needed; global BFD is optional.","Both global bfd and neighbor-level fall-over bfd are required; neighbor-level alone leaves the session admin-down.","Only the global bfd command is needed; neighbor-level configuration is automatic.","BFD requires no configuration \u2014 it activates automatically once a BGP session is established."],
+ correct:[1],
+ rationale:"Both global bfd and neighbor-level fall-over bfd are required simultaneously \u2014 neighbor-level alone leaves the session admin-down, confirmed live in the lab."},
+
+{q:"What is the difference between bgp fast-external-fallover and neighbor <IP> fall-over bfd?", multi:false,
+ choices:["They are two names for the same mechanism.","Fast-external-fallover only applies to directly connected external BGP links going physically down; BFD fallover also works for non-directly-connected peers, such as multihop, via active probing.","Fast-external-fallover works for multihop peers; BFD fallover only works for directly connected peers.","Fast-external-fallover is for internal BGP; BFD fallover is for external BGP only."],
+ correct:[1],
+ rationale:"Fast-external-fallover only applies to directly connected external links going physically down; BFD fallover works for both direct and non-directly-connected peers (e.g., multihop) via active probing."},
+
+{q:"What is required before the network command can successfully advertise a prefix into BGP?", multi:false,
+ choices:["The prefix must already exist in the local IP routing table as an exact match.","The prefix must be learned via redistribution from OSPF first.","The prefix must be configured with next-hop-self.","Nothing \u2014 the network command can inject any arbitrary prefix regardless of the routing table."],
+ correct:[0],
+ rationale:"The network command requires an exact-match prefix already present in the local IP routing table before it can successfully advertise."},
+
+{q:"In BGP table output, what does the origin code \u201c?\u201d mean?", multi:false,
+ choices:["The route was learned via a fully-meshed iBGP session.","Incomplete \u2014 typically indicating the route was redistributed into BGP from another routing protocol.","The route failed authentication.","The route is pending withdrawal."],
+ correct:[1],
+ rationale:"A question mark means incomplete \u2014 typically indicating the route was redistributed into BGP from a foreign routing protocol."},
+
+{q:"What are the confirmed administrative distance values for external and internal BGP routes?", multi:false,
+ choices:["External 20, internal 200.","External 200, internal 20.","External 110, internal 90.","External 1, internal 255."],
+ correct:[0],
+ rationale:"External BGP routes show administrative distance 20; internal BGP routes show 200 \u2014 confirmed in lab output, consistent with the textbook's stated preference for eBGP over iBGP."},
+
+{q:"Is BGP Weight shared between peers, and how is it evaluated relative to other attributes?", multi:false,
+ choices:["Weight is shared between all peers and evaluated last.","Weight is never shared or advertised between peers, is locally significant only, and is evaluated first in path selection.","Weight is shared only with iBGP peers, similar to Local Preference.","Weight is evaluated only after AS path length and MED."],
+ correct:[1],
+ rationale:"Weight is never shared or advertised between BGP peers, is locally significant only, and is the first attribute evaluated in path selection."},
+
+{q:"What is BGP Local Preference's default value, and with which peers is it shared?", multi:false,
+ choices:["Default 0, shared with all peers.","Default 100, shared only with internal (iBGP) peers, never advertised externally.","Default 100, shared only with external (eBGP) peers.","Default 1, shared with all peers equally."],
+ correct:[1],
+ rationale:"Local Preference defaults to 100 and is shared only with internal (iBGP) peers \u2014 never advertised externally."},
+
+{q:"Does BGP load-share across equal-cost paths by default?", multi:false,
+ choices:["Yes, automatically, with no configuration required.","No \u2014 Equal Cost Multipath (ECMP) must be explicitly enabled for BGP to load-balance.","Yes, but only for internal BGP sessions.","No \u2014 BGP has no load-sharing capability under any configuration."],
+ correct:[1],
+ rationale:"BGP does not load-share by default; Equal Cost Multipath (ECMP) must be explicitly enabled for load balancing across equal paths."},
+
+{q:"What problem does next-hop-self solve, and when does the change actually take effect?", multi:false,
+ choices:["It solves an MTU mismatch issue; the change is immediate.","It solves the problem of internal peers being unable to install an externally-learned route without a route to the external next hop; the change only affects the next BGP update, requiring a session clear to take effect immediately.","It solves an authentication mismatch; the change requires a full router reboot.","It solves a VLAN tagging issue between eBGP peers; the change is retroactive to all prior updates."],
+ correct:[1],
+ rationale:"Next-hop-self solves the problem of an internal peer being unable to install an externally-learned route without a route to that external next hop; the change only affects the next BGP update and requires a session clear to take effect immediately."},
+
+{q:"What risk does a multi-homed customer Autonomous System face if it doesn't filter outbound BGP advertisements to its ISPs?", multi:false,
+ choices:["It risks losing its public IP allocation.","It risks unintentionally becoming a transit Autonomous System, carrying traffic between two unrelated upstream ISPs.","It risks its BGP session timing out due to excessive updates.","It risks being unable to originate its own routes."],
+ correct:[1],
+ rationale:"Without outbound filtering, a multi-homed customer AS risks becoming an unintentional transit AS between two unrelated upstream ISPs."},
+
+{q:"What does the AS path list regex ^$ (caret-dollar) match, and what do the individual symbols mean?", multi:false,
+ choices:["It matches any path containing at least one AS; caret means \u201cmust end with,\u201d dollar means \u201cmust begin with.\u201d","It matches an empty AS path (locally originated route); caret means \u201cmust begin with,\u201d dollar means \u201cmust end with.\u201d","It matches only paths longer than 5 hops; the symbols are wildcard operators.","It has no defined meaning in BGP AS path filtering."],
+ correct:[1],
+ rationale:"Caret-dollar matches an empty AS path (a locally originated route); caret means \u201cmust begin with,\u201d dollar means \u201cmust end with.\u201d"},
+
+{q:"What are the three steps to deploy a BGP outbound route policy, per source?", multi:false,
+ choices:["Enable BGP, configure a neighbor, advertise a network.","Configure filters based on route attributes, create a route map and apply the filters, apply the route map to BGP.","Create an ACL, apply it to an interface, enable logging.","Define an AS number, configure redistribution, enable next-hop-self."],
+ correct:[1],
+ rationale:"Configure filters based on route attributes, create a route map and apply the filters to it, then apply the route map to BGP \u2014 the three-step process stated in source."},
+
+{q:"After applying a new outbound route-map policy to a BGP neighbor, what must happen for it to take effect?", multi:false,
+ choices:["Nothing \u2014 the policy applies instantly to all future and prior advertisements.","The session must be reset (hard reset via clear bgp <neighbor>, or a soft reset) for the policy to take effect.","The entire router must be rebooted.","The neighbor relationship must be deleted and recreated from scratch."],
+ correct:[1],
+ rationale:"The session must be reset \u2014 either a hard reset (clear bgp <neighbor>) or a soft reset (clear bgp all * soft in) \u2014 for a new route-map policy to take effect."},
+
+{q:"In a VSX pair, is BGP configuration synchronized between core switches by default, and is route-map sync the same feature?", multi:false,
+ choices:["No, BGP is never synchronized between VSX peers.","Yes, BGP configuration is synchronized by default; route-map synchronization is described as a separate VSX synchronization feature.","Yes, but only route-map synchronization exists \u2014 general BGP config is never synced.","BGP synchronization requires manual configuration on both switches every time."],
+ correct:[1],
+ rationale:"BGP configuration is synchronized between VSX peers by default; route-map synchronization is described in source as a separate VSX synchronization feature."},
+
+{q:"What is a Route Reflector, and does a client require special configuration to receive reflected routes?", multi:false,
+ choices:["A router that reflects BGP routes between iBGP peers within the same AS; clients require no special configuration and are unaware reflection is occurring.","A router that reflects routes only between different Autonomous Systems; clients must be manually configured to accept reflected routes.","A firewall feature unrelated to BGP route propagation.","A mechanism that requires every router in the AS to peer with every other router, same as a full mesh."],
+ correct:[0],
+ rationale:"A Route Reflector reflects BGP routes between iBGP peers within the same AS; clients require no special configuration and are unaware reflection is happening."},
+
+{q:"What is a BGP Confederation, and is its configuration covered by this course's source material?", multi:false,
+ choices:["A method of subdividing one large AS into smaller sub-ASes that appear as a single AS externally; the CLI configuration is explicitly stated as beyond the scope of the source guide.","A method of merging two ASes into one; full CLI configuration is provided in the source material.","A synonym for Route Reflector; the two terms are interchangeable.","A feature exclusive to eBGP sessions with no relevance to iBGP."],
+ correct:[0],
+ rationale:"A Confederation subdivides a large AS into smaller sub-ASes that appear as a single AS externally; the source explicitly states confederation CLI configuration is beyond its scope."},
+
+{q:"What three problems can Route Reflectors and Confederations introduce, per source?", multi:false,
+ choices:["Session flapping, MTU mismatch, and authentication failure.","Route oscillation, sub-optimal routing, and increased convergence time.","VLAN mismatch, duplicate IP addresses, and spanning tree loops.","DHCP exhaustion, ARP poisoning, and broadcast storms."],
+ correct:[1],
+ rationale:"Route oscillation, sub-optimal routing, and increased convergence time are the three named problems."},
+
+{q:"Can BGP confederation sub-Autonomous-Systems be assigned private ASNs?", multi:false,
+ choices:["No \u2014 confederation sub-ASes must always use public, IANA-assigned ASNs.","Yes \u2014 and this is also the confirmed exam solution for a newly-integrated branch with an ASN that overlaps an existing branch's range.","Only if the sub-AS is running eBGP exclusively.","Private ASNs are only usable inside a VSX pair, not within a confederation."],
+ correct:[1],
+ rationale:"Confederation sub-ASes can be assigned private ASNs \u2014 also the confirmed solution for integrating a new branch whose ASN overlaps an existing branch's range."}
+];
+
+let current = 0;
+let answered = new Array(QUESTIONS.length).fill(null); // null = unanswered, else {selected:[], correct:bool}
+let selections = new Array(QUESTIONS.length).fill(null).map(()=>[]);
+
+const rail = document.getElementById('rail');
+const card = document.getElementById('quizCard');
+const progressLabel = document.getElementById('progressLabel');
+
+function buildRail(){
+  rail.innerHTML = '';
+  QUESTIONS.forEach((_, i)=>{
+    const p = document.createElement('div');
+    p.className = 'port';
+    p.textContent = i+1;
+    p.title = 'Question ' + (i+1);
+    p.addEventListener('click', ()=>{ current = i; render(); });
+    rail.appendChild(p);
+  });
+  updateRail();
+}
+
+function updateRail(){
+  const ports = rail.querySelectorAll('.port');
+  ports.forEach((p,i)=>{
+    p.classList.remove('current','correct','incorrect');
+    if(i===current) p.classList.add('current');
+    if(answered[i]) p.classList.add(answered[i].correct ? 'correct' : 'incorrect');
+  });
+}
+
+function render(){
+  const q = QUESTIONS[current];
+  const state = answered[current];
+  progressLabel.textContent = 'Q' + (current+1) + ' of ' + QUESTIONS.length;
+
+  let html = `<div class="qmeta"><span class="tag">${q.multi ? 'Select ' + q.correct.length : 'Single Response'}</span><span>#${current+1}</span></div>`;
+  html += `<p class="qtext">${q.q}</p>`;
+  html += `<div class="choices">`;
+  q.choices.forEach((c, i)=>{
+    let cls = 'choice';
+    const isSelected = selections[current].includes(i);
+    if(state){
+      if(q.correct.includes(i)) cls += ' correct';
+      else if(isSelected) cls += ' incorrect';
+    } else if(isSelected){
+      cls += ' selected';
+    }
+    html += `<div class="${cls}" data-idx="${i}"><span class="marker">${String.fromCharCode(65+i)}</span><span class="ctext">${c}</span></div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="rationale${state ? ' show' : ''}"><b>Rationale:</b> ${q.rationale}</div>`;
+
+  html += `<div class="actions">`;
+  html += `<div class="btn-group">`;
+  html += `<button class="btn" id="prevBtn" ${current===0?'disabled':''}>&larr; Prev</button>`;
+  html += `<button class="btn" id="nextBtn" ${current===QUESTIONS.length-1?'disabled':''}>Next &rarr;</button>`;
+  html += `</div>`;
+  if(!state){
+    html += `<button class="btn primary" id="checkBtn">Check answer</button>`;
+  } else {
+    html += `<button class="btn" id="finishBtn">${allAnswered() ? 'View score' : 'Continue'}</button>`;
+  }
+  html += `</div>`;
+
+  card.innerHTML = html;
+
+  card.querySelectorAll('.choice').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      if(answered[current]) return;
+      const idx = parseInt(el.dataset.idx);
+      if(q.multi){
+        const pos = selections[current].indexOf(idx);
+        if(pos>-1) selections[current].splice(pos,1);
+        else selections[current].push(idx);
+      } else {
+        selections[current] = [idx];
+      }
+      render();
+    });
+  });
+
+  const checkBtn = document.getElementById('checkBtn');
+  if(checkBtn){
+    checkBtn.addEventListener('click', ()=>{
+      if(selections[current].length===0) return;
+      const sel = [...selections[current]].sort();
+      const cor = [...q.correct].sort();
+      const isCorrect = JSON.stringify(sel)===JSON.stringify(cor);
+      answered[current] = {selected:sel, correct:isCorrect};
+      updateRail();
+      render();
+    });
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', ()=>{ if(current>0){ current--; render(); }});
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ if(current<QUESTIONS.length-1){ current++; render(); }});
+
+  const finishBtn = document.getElementById('finishBtn');
+  if(finishBtn){
+    finishBtn.addEventListener('click', ()=>{
+      if(allAnswered()) showSummary();
+      else if(current<QUESTIONS.length-1){ current++; render(); }
+    });
+  }
+}
+
+function allAnswered(){
+  return answered.every(a=>a!==null);
+}
+
+function showSummary(){
+  const correctCount = answered.filter(a=>a.correct).length;
+  const pct = Math.round((correctCount/QUESTIONS.length)*100);
+  let scoreClass = 'score';
+  if(pct < 60) scoreClass += ' low';
+  else if(pct < 80) scoreClass += ' mid';
+
+  card.innerHTML = `
+    <div class="summary">
+      <div class="${scoreClass}">${pct}%</div>
+      <div class="label">${correctCount} of ${QUESTIONS.length} correct</div>
+      <p>Real exam passing score is 68%. Review any missed items in Module_4_Assessment.md for full rationale, then revisit the Concepts Overview or Technical Mastery doc for that pillar.</p>
+      <div class="btn-group" style="justify-content:center; margin-top:20px;">
+        <button class="btn primary" id="restartBtn">Restart quiz</button>
+      </div>
+    </div>`;
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    answered = new Array(QUESTIONS.length).fill(null);
+    selections = new Array(QUESTIONS.length).fill(null).map(()=>[]);
+    current = 0;
+    buildRail();
+    render();
+  });
+}
+
+buildRail();
+render();
+</script>
+</body>
+</html>

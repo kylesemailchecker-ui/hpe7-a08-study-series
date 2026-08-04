@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Module 3 Assessment — OSPF &amp; Additional L3 Features</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1419;
+    --panel:#161D24;
+    --panel-raised:#1C242C;
+    --border:#2A333D;
+    --text:#E8ECF0;
+    --text-dim:#8B98A5;
+    --up:#3FB950;
+    --up-dim:#1C3A24;
+    --down:#F85149;
+    --down-dim:#3A1F1F;
+    --pending:#D29922;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:32px 16px 64px;
+  }
+  .app{ width:100%; max-width:840px; }
+
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:1px solid var(--border);
+    padding-bottom:14px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .masthead h1{
+    font-family:var(--mono);
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    margin:0;
+    color:var(--text);
+  }
+  .masthead h1 .dim{ color:var(--text-dim); font-weight:400; }
+  .masthead .sub{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+
+  /* Port status rail */
+  .rail{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:24px;
+    padding:14px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+  .port{
+    width:20px;
+    height:20px;
+    border-radius:3px;
+    background:#232C34;
+    border:1px solid var(--border);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--mono);
+    font-size:9px;
+    color:var(--text-dim);
+    transition:transform 0.12s ease;
+  }
+  .port:hover{ transform:translateY(-1px); }
+  .port.current{ border-color:var(--text-dim); box-shadow:0 0 0 1px var(--text-dim); }
+  .port.correct{ background:var(--up-dim); border-color:var(--up); color:var(--up); }
+  .port.incorrect{ background:var(--down-dim); border-color:var(--down); color:var(--down); }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:28px;
+  }
+  .qmeta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .qmeta .tag{
+    background:var(--panel-raised);
+    border:1px solid var(--border);
+    padding:3px 8px;
+    border-radius:4px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    font-size:10px;
+  }
+  .qtext{
+    font-size:17px;
+    line-height:1.5;
+    margin:0 0 20px;
+    font-weight:500;
+  }
+  .choices{ display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+  .choice{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    background:var(--panel-raised);
+    transition:border-color 0.12s ease, background 0.12s ease;
+  }
+  .choice:hover{ border-color:var(--text-dim); }
+  .choice.selected{ border-color:var(--pending); background:#241F14; }
+  .choice.correct{ border-color:var(--up); background:var(--up-dim); }
+  .choice.incorrect{ border-color:var(--down); background:var(--down-dim); }
+  .choice .marker{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+    width:18px;
+    flex-shrink:0;
+    padding-top:1px;
+  }
+  .choice.correct .marker, .choice.correct .ctext{ color:var(--up); }
+  .choice.incorrect .marker, .choice.incorrect .ctext{ color:var(--down); }
+  .ctext{ font-size:14.5px; line-height:1.45; }
+
+  .rationale{
+    display:none;
+    font-family:var(--sans);
+    font-size:14px;
+    line-height:1.55;
+    color:var(--text-dim);
+    background:var(--panel-raised);
+    border-left:3px solid var(--pending);
+    padding:12px 16px;
+    border-radius:0 6px 6px 0;
+    margin-bottom:20px;
+  }
+  .rationale.show{ display:block; }
+  .rationale b{ color:var(--text); }
+
+  .actions{ display:flex; justify-content:space-between; align-items:center; }
+  .btn{
+    font-family:var(--mono);
+    font-size:13px;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:var(--panel-raised);
+    color:var(--text);
+    cursor:pointer;
+    transition:border-color 0.12s ease;
+  }
+  .btn:hover:not(:disabled){ border-color:var(--text-dim); }
+  .btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  .btn.primary{ background:var(--up-dim); border-color:var(--up); color:var(--up); }
+  .btn-group{ display:flex; gap:8px; }
+
+  .hint{ font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:6px; }
+
+  .summary{ text-align:center; padding:40px 20px; }
+  .summary .score{
+    font-family:var(--mono);
+    font-size:56px;
+    font-weight:700;
+    color:var(--up);
+    line-height:1;
+  }
+  .summary .score.low{ color:var(--down); }
+  .summary .score.mid{ color:var(--pending); }
+  .summary .label{ font-family:var(--mono); font-size:13px; color:var(--text-dim); margin-top:8px; letter-spacing:0.04em; text-transform:uppercase; }
+  .summary p{ color:var(--text-dim); font-size:14px; margin-top:20px; line-height:1.6; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+  @media (max-width:520px){
+    .card{ padding:20px; }
+    .qtext{ font-size:15.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="masthead">
+    <h1>MODULE 3 <span class="dim">/ Assessment</span></h1>
+    <div class="sub" id="progressLabel">Q1 of 34</div>
+  </div>
+
+  <div class="rail" id="rail"></div>
+
+  <div class="card" id="quizCard"></div>
+</div>
+
+<script>
+const QUESTIONS = [
+{q:"What are the three conditions a receiving router checks before forming an OSPF adjacency? (Select three.)", multi:true,
+ choices:["Matching area ID, network/subnet, and hello/dead intervals.","Matching stub area flag, authentication, and interface MTU.","Matching VLAN ID and switch hostname.","Matching router ID and process ID."],
+ correct:[0,1],
+ rationale:"Area ID, network/subnet, hello/dead intervals, stub area flag, authentication, and interface MTU must all match. VLAN ID/hostname and router ID/process ID are not part of this adjacency check."},
+
+{q:"What is the correct OSPF neighbor state progression on a point-to-point link?", multi:false,
+ choices:["INIT \u2192 FULL \u2192 2WAY","INIT \u2192 2WAY \u2192 FULL","2WAY \u2192 INIT \u2192 FULL","FULL \u2192 2WAY \u2192 INIT"],
+ correct:[1],
+ rationale:"INIT (one-way hello seen) \u2192 2WAY (bidirectional, own router ID seen in peer's hello) \u2192 FULL (databases synchronized)."},
+
+{q:"What are the default OSPF Hello and Dead timer values?", multi:false,
+ choices:["Hello 5 seconds, Dead 20 seconds","Hello 10 seconds, Dead 40 seconds","Hello 10 seconds, Dead 30 seconds","Hello 30 seconds, Dead 120 seconds"],
+ correct:[1],
+ rationale:"Default Hello is 10 seconds, default Dead is 40 seconds (4x the Hello timer)."},
+
+{q:"Which OSPF network type has no DR/BDR election and is recommended for transit links between core switches?", multi:false,
+ choices:["Broadcast","NBMA","Point-to-point","Passive"],
+ correct:[2],
+ rationale:"Point-to-point networks have no DR/BDR election, converge faster than broadcast, and are recommended for transit links like core-to-core connections."},
+
+{q:"What happens if a router with a higher OSPF priority joins a segment after a DR is already elected?", multi:false,
+ choices:["It immediately becomes the new DR, since it has the higher priority.","It does not displace the existing DR \u2014 there is no preemption.","A new DR/BDR election is triggered for the whole segment.","It becomes a second, co-equal DR alongside the existing one."],
+ correct:[1],
+ rationale:"There is no preemption once a DR/BDR is elected \u2014 a higher-priority or higher-router-ID router joining later does not displace the existing DR/BDR."},
+
+{q:"What is the key difference between how DR and BDR routers listen for updates?", multi:false,
+ choices:["The DR advertises updates on 224.0.0.5 (all routers); the BDR listens on 224.0.0.6 (DR/BDR-only).","The DR listens on 224.0.0.6; the BDR advertises on 224.0.0.5.","Both the DR and BDR use only 224.0.0.5.","Both the DR and BDR use only 224.0.0.6."],
+ correct:[0],
+ rationale:"The DR advertises on 224.0.0.5 (all OSPF routers); the BDR listens on 224.0.0.6 (DR/BDR-only multicast)."},
+
+{q:"In OSPF LSDB output, does a Type 3 \u201cInter-area Summary\u201d LSA imply route summarization has been configured?", multi:false,
+ choices:["Yes \u2014 Type 3 LSAs only exist when summarization is explicitly configured on an ABR.","No \u2014 \u201cSummary\u201d here only means the LSA isn't used for that area's own topology (SPF) calculation; only Type 1 and Type 2 LSAs build an area's topology.","Yes, but only when the ABR is also an ASBR.","No \u2014 Type 3 LSAs are generated only when NSSA is configured."],
+ correct:[1],
+ rationale:"\u201cSummary\u201d in Type 3 LSA output only means it isn't used for that area's own SPF topology calculation \u2014 only Type 1 and Type 2 LSAs build an area's topology. This is explicitly called out as a common point of confusion."},
+
+{q:"Which LSA type advertises the presence (not the routes) of an ASBR to routers in other areas?", multi:false,
+ choices:["Type 1 (Router)","Type 3 (Summary)","Type 4 (ASBR Summary)","Type 5 (AS External)"],
+ correct:[2],
+ rationale:"Type 4 (ASBR Summary) LSAs, generated by ABRs, tell other-area routers how to reach an ASBR's router ID \u2014 since Type 5 LSAs identify the ASBR only by router ID, not a routable interface."},
+
+{q:"What must every non-backbone OSPF area have?", multi:false,
+ choices:["At least one ASBR.","At least one ABR connecting it to Area 0, directly or via virtual link.","A unique process ID, distinct from Area 0's.","BFD enabled on all interfaces."],
+ correct:[1],
+ rationale:"Every non-backbone area must have at least one ABR connecting it to Area 0, directly or via a virtual link."},
+
+{q:"What does the no-advertise keyword do when appended to an area range summarization command?", multi:false,
+ choices:["It summarizes the range and advertises it, but only to directly connected areas.","It summarizes the range but suppresses advertisement of it entirely \u2014 keeping certain subnets local to the area.","It disables summarization for that specific range only.","It forces the summary to be advertised as a Type 5 LSA instead of Type 3."],
+ correct:[1],
+ rationale:"no-advertise summarizes the range but suppresses its advertisement entirely, keeping it local to the area."},
+
+{q:"Route summarization must be configured where to take effect?", multi:false,
+ choices:["Only on the OSPF backbone router.","On every ABR where the summarization is desired \u2014 an ABR without the area range command continues announcing the individual, more-specific routes.","Globally, under the OSPF process, affecting all ABRs automatically.","Only on the ASBR that originated the routes."],
+ correct:[1],
+ rationale:"Summarization must be configured on every ABR where it's desired \u2014 an ABR without the area range command keeps announcing specific routes, pulling traffic toward it unintentionally."},
+
+{q:"What is the functional difference between External Type 1 (E1) and External Type 2 (E2) redistributed routes?", multi:false,
+ choices:["E2 (default) keeps a fixed cost regardless of distance to the ASBR; E1's cost is the ASBR's metric plus internal OSPF cost, letting OSPF prefer the closest ASBR.","E1 is the default and always has a fixed cost; E2 varies by distance to the ASBR.","E1 and E2 are functionally identical \u2014 only the LSA type number differs.","E2 applies only to NSSA areas; E1 applies only to standard areas."],
+ correct:[0],
+ rationale:"E2 (default) keeps a fixed cost regardless of distance; E1's cost includes internal OSPF cost to the ASBR, letting OSPF prefer the closest ASBR when multiple advertise the same network."},
+
+{q:"What is the OSPF route preference order, before cost is ever evaluated?", multi:false,
+ choices:["External routes, then inter-area, then intra-area.","Intra-area routes, then inter-area routes, then external routes.","Inter-area routes, then intra-area routes, then external routes.","All route types are evaluated by cost first, regardless of origin."],
+ correct:[1],
+ rationale:"Intra-area, then inter-area, then external \u2014 this ordering is evaluated before cost."},
+
+{q:"Which area type blocks Type 5 (external) LSAs but still permits an ASBR inside the area, using Type 7 LSAs instead?", multi:false,
+ choices:["Stub","Totally Stubby","NSSA","Standard"],
+ correct:[2],
+ rationale:"NSSA blocks Type 5 LSAs from the backbone but permits an ASBR inside the NSSA using Type 7 LSAs, later translated to Type 5 by the ABR."},
+
+{q:"What happens if a stub/NSSA setting is mismatched between two OSPF neighbors in the same area?", multi:false,
+ choices:["The adjacency forms normally, but routes are filtered incorrectly.","The adjacency fails to form at all, logged as an \u201cOptions mismatch.\u201d","Only Type 3 LSAs are affected; Type 1/2 continue normally.","The router with the mismatched setting is automatically demoted to DROTHER."],
+ correct:[1],
+ rationale:"A mismatched stub/NSSA setting causes an Options mismatch and prevents the adjacency from forming at all \u2014 confirmed live in the lab."},
+
+{q:"What are BFD's default Min Transmit and Min Receive timers for OSPF?", multi:false,
+ choices:["100 ms / 100 ms","500 ms / 500 ms","1000 ms / 1000 ms","3000 ms / 3000 ms"],
+ correct:[1],
+ rationale:"Default BFD Min Tx and Min Rx are both 500 ms, with a Detection Multiplier of 3\u20135 (HPE recommends leaving these at default)."},
+
+{q:"What does OSPF Graceful Restart allow, and what LSA type signals it?", multi:false,
+ choices:["It lets the Restarter's neighbors immediately tear down the adjacency; signaled by a Type 5 LSA.","It lets the Restarter's OSPF process restart without neighbors tearing down the adjacency; signaled by a Type 9 opaque grace LSA.","It lets two ABRs skip authentication during a restart; signaled by a Type 3 LSA.","It permanently disables Hello/Dead timers for that router."],
+ correct:[1],
+ rationale:"Graceful Restart lets the Restarter's OSPF process restart without neighbors tearing down the adjacency, signaled by a Type 9 opaque grace LSA."},
+
+{q:"How does OSPF behave differently on a VSX pair versus a VSF fabric?", multi:false,
+ choices:["VSX members share a single OSPF process; VSF members each run independent processes.","Each VSX member runs its own independent OSPF process; VSF (single control plane) fabric members do not need their own process, but adjacency survival across a conductor failover is not automatic.","Neither VSX nor VSF affects OSPF process behavior in any way.","VSX requires OSPF to be disabled entirely; only VSF supports OSPF."],
+ correct:[1],
+ rationale:"VSX members each run independent OSPF processes; VSF is a single control plane, so members don't need their own process, but this doesn't automatically guarantee seamless adjacency survival across a conductor failover."},
+
+{q:"Per the VSG best-practice guidance, how many OSPF areas should a typical single campus LAN use?", multi:false,
+ choices:["One single area, with multi-area reserved for connecting multiple campus sites or WAN topologies.","At minimum three areas, one per tier (Access, Aggregation, Core).","As many areas as there are VLANs.","Area 0 must never be used in a campus LAN design."],
+ correct:[0],
+ rationale:"A single OSPF area is used for the campus LAN itself; multi-area designs are reserved for connecting multiple campus sites or WAN topologies."},
+
+{q:"What is a virtual link, and what is the guidance on when to use one?", multi:false,
+ choices:["A physical backup cable between two ABRs, used whenever redundancy is desired.","A logical, point-to-point OSPF connection between two ABRs tunneled through a transit area \u2014 described as a patch, to be used only when no other way exists to connect a new area to the backbone.","A permanent design pattern recommended for all new area deployments.","A feature exclusive to NSSA areas."],
+ correct:[1],
+ rationale:"A virtual link is a logical point-to-point OSPF connection between two ABRs through a transit area, explicitly described as a patch to use only when no other way exists to connect a new area to the backbone."},
+
+{q:"What does VRF allow a single physical router to do?", multi:false,
+ choices:["Run multiple physical interfaces as one logical interface.","Partition into multiple virtual router forwarding instances, each with its own isolated routing table.","Automatically summarize all connected routes into a single table.","Share one routing table across multiple physical chassis."],
+ correct:[1],
+ rationale:"VRF partitions a single physical router into multiple virtual router forwarding instances, each with an isolated routing table."},
+
+{q:"What is the built-in VRF named on AOS-CX switches, and what is it used for?", multi:false,
+ choices:["blue \u2014 used for guest network isolation.","mgmt \u2014 used to separate the data/control plane from the management plane (OOBM port).","default \u2014 used exclusively for VXLAN overlays.","There is no built-in VRF; all must be manually created."],
+ correct:[1],
+ rationale:"The built-in mgmt VRF separates the data/control plane from the management plane, specifically for the OOBM port."},
+
+{q:"What happens to an interface's existing IP configuration when it is moved to a non-default VRF via vrf attach?", multi:false,
+ choices:["The IP configuration is automatically preserved and carried over.","The IP configuration is removed the moment the interface is reattached \u2014 it must be manually re-applied afterward.","Only the subnet mask is removed; the IP address itself is retained.","The change is rejected unless the interface is first shut down."],
+ correct:[1],
+ rationale:"The interface's existing IP configuration is removed the moment it's reattached to a VRF via vrf attach \u2014 it must be manually re-applied afterward."},
+
+{q:"Why does vrf attach strip the interface's existing IP configuration rather than preserving it?", multi:false,
+ choices:["It's an unintentional bug that HPE has not yet addressed.","It's a deliberate security/isolation mechanism, preventing one customer's or business unit's IP configuration from accidentally carrying over into another VRF.","It only happens when the interface is a loopback, not a VLAN SVI.","It only happens the first time an interface is attached to any VRF."],
+ correct:[1],
+ rationale:"This is a deliberate security/isolation mechanism preventing one VRF's IP configuration from accidentally carrying over into another."},
+
+{q:"On a VSX pair, which settings sync automatically when a new VLAN/VRF user subnet is configured? (Select two.)", multi:true,
+ choices:["Layer 2 VLAN and Layer 2 LAG allowed-VLAN list.","Layer 3 VLAN active-gateway settings and Layer 3 IP helper address.","The Layer 3 interface definition itself.","The VRF attachment and IP address assignment."],
+ correct:[0,1],
+ rationale:"Layer 2 VLAN, Layer 2 LAG allowed-VLAN list, Layer 3 VLAN active-gateway settings, and Layer 3 IP helper address all sync automatically. The Layer 3 interface definition itself, and the VRF attachment/IP assignment, must still be configured manually on the secondary."},
+
+{q:"What are the two described mechanisms for leaking routes between otherwise-isolated VRFs?", multi:false,
+ choices:["Static route leaking (manually configured, route must already exist in the source VRF) and dynamic route leaking (using Multiprotocol BGP with per-VRF address families).","OSPF virtual links and BFD sessions.","VXLAN tunnels and GRE tunnels exclusively.","VSX config sync and VSF fabric proxying."],
+ correct:[0],
+ rationale:"Static route leaking (manual ip route, route must pre-exist in the source VRF) and dynamic route leaking (Multiprotocol BGP with per-VRF address families) are the two described mechanisms."},
+
+{q:"What must an administrator explicitly do to run OSPF inside a non-default VRF?", multi:false,
+ choices:["Nothing \u2014 OSPF automatically binds to every VRF on the switch.","Explicitly bind the OSPF process itself to the target VRF, using the vrf keyword under router ospf <id>.","Disable OSPF in the default VRF first.","Use a completely different routing protocol, since OSPF cannot run inside a VRF."],
+ correct:[1],
+ rationale:"The OSPF process itself must be explicitly bound to the target VRF using the vrf keyword under router ospf <id>."},
+
+{q:"On a VSX pair, which OSPF-in-VRF setting is the one exception that does NOT sync automatically to the secondary switch?", multi:false,
+ choices:["The area assignment.","The router ID.","The interface's OSPF process ID.","The passive-interface setting."],
+ correct:[1],
+ rationale:"The router ID is the one exception that does not sync automatically to the VSX secondary \u2014 if omitted there, an active IP address is auto-selected instead."},
+
+{q:"What does Policy-Based Routing (PBR) override, and based on what?", multi:false,
+ choices:["It overrides Spanning Tree's port roles, based on VLAN membership.","It overrides the normal, destination-based longest-match routing decision, based on other packet attributes such as source IP, protocol, or port.","It overrides DHCP lease assignment, based on MAC address.","It overrides LACP's hashing algorithm, based on destination MAC."],
+ correct:[1],
+ rationale:"PBR overrides the normal, destination-based longest-match routing decision, based on other packet attributes like source IP, protocol, or port."},
+
+{q:"What is the stated constraint on PBR next-hop actions?", multi:false,
+ choices:["They can point to any reachable IP address, including recursive lookups through indirect next hops.","They must point to directly connected IP addresses \u2014 PBR does not support recursive lookups to indirectly connected next-hops.","They can only point to a VRF-scoped loopback interface.","They require BGP to be running on the same interface."],
+ correct:[1],
+ rationale:"PBR next-hop actions must point to directly connected IP addresses; PBR does not support recursive lookups to indirectly connected next-hops."},
+
+{q:"What two named vulnerabilities does DHCP Snooping mitigate? (Select two.)", multi:true,
+ choices:["Address spoofing \u2014 a rogue DHCP server assigning invalid addresses or posing as the default gateway.","Address exhaustion \u2014 an attacker exhausting the legitimate DHCP server's pool.","VLAN hopping via double-tagged frames.","ARP cache poisoning via gratuitous ARP."],
+ correct:[0,1],
+ rationale:"Address spoofing (rogue DHCP server) and address exhaustion (pool depletion) are the two named vulnerabilities DHCP Snooping mitigates."},
+
+{q:"What is stored in the DHCP Snooping binding table?", multi:false,
+ choices:["Only the MAC address and VLAN of each active lease.","MAC address, IP address, lease time, VLAN, and interface for each active lease.","Only the DHCP server's IP address and a timestamp.","The full DHCP packet payload for auditing purposes."],
+ correct:[1],
+ rationale:"The binding table stores MAC address, IP address, lease time, VLAN, and interface for each active lease."},
+
+{q:"What does Dynamic ARP Inspection (DAI) validate ARP traffic against?", multi:false,
+ choices:["A statically configured list of approved MAC addresses.","The same IP-to-MAC binding table built by DHCP Snooping.","A separate, DAI-specific binding table unrelated to DHCP Snooping.","The switch's own CAM/MAC address table only."],
+ correct:[1],
+ rationale:"DAI validates ARP traffic against the same IP-to-MAC binding table built by DHCP Snooping \u2014 this dependency is a core part of how the two features relate."},
+
+{q:"Which port type is always considered trusted for DAI without requiring a manual trust command?", multi:false,
+ choices:["Any uplink LAG.","Any port with LACP Fallback enabled.","A VXLAN tunnel port.","The management VLAN's SVI."],
+ correct:[2],
+ rationale:"A VXLAN tunnel port is always considered trusted for DAI, so the manual trust step can be skipped for that port type specifically."}
+];
+
+let current = 0;
+let answered = new Array(QUESTIONS.length).fill(null); // null = unanswered, else {selected:[], correct:bool}
+let selections = new Array(QUESTIONS.length).fill(null).map(()=>[]);
+
+const rail = document.getElementById('rail');
+const card = document.getElementById('quizCard');
+const progressLabel = document.getElementById('progressLabel');
+
+function buildRail(){
+  rail.innerHTML = '';
+  QUESTIONS.forEach((_, i)=>{
+    const p = document.createElement('div');
+    p.className = 'port';
+    p.textContent = i+1;
+    p.title = 'Question ' + (i+1);
+    p.addEventListener('click', ()=>{ current = i; render(); });
+    rail.appendChild(p);
+  });
+  updateRail();
+}
+
+function updateRail(){
+  const ports = rail.querySelectorAll('.port');
+  ports.forEach((p,i)=>{
+    p.classList.remove('current','correct','incorrect');
+    if(i===current) p.classList.add('current');
+    if(answered[i]) p.classList.add(answered[i].correct ? 'correct' : 'incorrect');
+  });
+}
+
+function render(){
+  const q = QUESTIONS[current];
+  const state = answered[current];
+  progressLabel.textContent = 'Q' + (current+1) + ' of ' + QUESTIONS.length;
+
+  let html = `<div class="qmeta"><span class="tag">${q.multi ? 'Select ' + q.correct.length : 'Single Response'}</span><span>#${current+1}</span></div>`;
+  html += `<p class="qtext">${q.q}</p>`;
+  html += `<div class="choices">`;
+  q.choices.forEach((c, i)=>{
+    let cls = 'choice';
+    const isSelected = selections[current].includes(i);
+    if(state){
+      if(q.correct.includes(i)) cls += ' correct';
+      else if(isSelected) cls += ' incorrect';
+    } else if(isSelected){
+      cls += ' selected';
+    }
+    html += `<div class="${cls}" data-idx="${i}"><span class="marker">${String.fromCharCode(65+i)}</span><span class="ctext">${c}</span></div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="rationale${state ? ' show' : ''}"><b>Rationale:</b> ${q.rationale}</div>`;
+
+  html += `<div class="actions">`;
+  html += `<div class="btn-group">`;
+  html += `<button class="btn" id="prevBtn" ${current===0?'disabled':''}>&larr; Prev</button>`;
+  html += `<button class="btn" id="nextBtn" ${current===QUESTIONS.length-1?'disabled':''}>Next &rarr;</button>`;
+  html += `</div>`;
+  if(!state){
+    html += `<button class="btn primary" id="checkBtn">Check answer</button>`;
+  } else {
+    html += `<button class="btn" id="finishBtn">${allAnswered() ? 'View score' : 'Continue'}</button>`;
+  }
+  html += `</div>`;
+
+  card.innerHTML = html;
+
+  card.querySelectorAll('.choice').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      if(answered[current]) return;
+      const idx = parseInt(el.dataset.idx);
+      if(q.multi){
+        const pos = selections[current].indexOf(idx);
+        if(pos>-1) selections[current].splice(pos,1);
+        else selections[current].push(idx);
+      } else {
+        selections[current] = [idx];
+      }
+      render();
+    });
+  });
+
+  const checkBtn = document.getElementById('checkBtn');
+  if(checkBtn){
+    checkBtn.addEventListener('click', ()=>{
+      if(selections[current].length===0) return;
+      const sel = [...selections[current]].sort();
+      const cor = [...q.correct].sort();
+      const isCorrect = JSON.stringify(sel)===JSON.stringify(cor);
+      answered[current] = {selected:sel, correct:isCorrect};
+      updateRail();
+      render();
+    });
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', ()=>{ if(current>0){ current--; render(); }});
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ if(current<QUESTIONS.length-1){ current++; render(); }});
+
+  const finishBtn = document.getElementById('finishBtn');
+  if(finishBtn){
+    finishBtn.addEventListener('click', ()=>{
+      if(allAnswered()) showSummary();
+      else if(current<QUESTIONS.length-1){ current++; render(); }
+    });
+  }
+}
+
+function allAnswered(){
+  return answered.every(a=>a!==null);
+}
+
+function showSummary(){
+  const correctCount = answered.filter(a=>a.correct).length;
+  const pct = Math.round((correctCount/QUESTIONS.length)*100);
+  let scoreClass = 'score';
+  if(pct < 60) scoreClass += ' low';
+  else if(pct < 80) scoreClass += ' mid';
+
+  card.innerHTML = `
+    <div class="summary">
+      <div class="${scoreClass}">${pct}%</div>
+      <div class="label">${correctCount} of ${QUESTIONS.length} correct</div>
+      <p>Real exam passing score is 68%. Review any missed items in Module_3_Assessment.md for full rationale, then revisit the Concepts Overview or Technical Mastery doc for that pillar.</p>
+      <div class="btn-group" style="justify-content:center; margin-top:20px;">
+        <button class="btn primary" id="restartBtn">Restart quiz</button>
+      </div>
+    </div>`;
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    answered = new Array(QUESTIONS.length).fill(null);
+    selections = new Array(QUESTIONS.length).fill(null).map(()=>[]);
+    current = 0;
+    buildRail();
+    render();
+  });
+}
+
+buildRail();
+render();
+</script>
+</body>
+</html>
