@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pre-Assessment (Diagnostic) — HPE7-A08 Switching Professional</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #10161f;
+    --panel-border: #1e2a3a;
+    --accent: #ff8300;
+    --accent-dim: #b35c00;
+    --text: #d7e0ea;
+    --text-dim: #7c8a9c;
+    --correct: #2ecc71;
+    --incorrect: #e74c3c;
+    --warn: #f1c40f;
+    --mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    margin: 0;
+    padding: 24px;
+    background-image:
+      linear-gradient(rgba(30,42,58,0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,42,58,0.35) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .console {
+    max-width: 820px;
+    margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(255,131,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.02);
+  }
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-border);
+    background: linear-gradient(180deg, #131b26, #0d1319);
+    border-radius: 8px 8px 0 0;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #e74c3c; } .dot.y { background: #f1c40f; } .dot.g { background: #2ecc71; }
+  .titlebar span.label {
+    margin-left: 8px; color: var(--text-dim); font-size: 12px; letter-spacing: 0.5px;
+  }
+  .header {
+    padding: 20px 24px 8px;
+    border-bottom: 1px dashed var(--panel-border);
+  }
+  .header h1 {
+    color: var(--accent);
+    font-size: 18px;
+    margin: 0 0 4px;
+    letter-spacing: 0.5px;
+  }
+  .header .sub { color: var(--text-dim); font-size: 12.5px; }
+  .prompt-line { color: var(--accent-dim); font-size: 12px; margin-top: 10px; }
+  .prompt-line::before { content: "root@aos-cx-switch:~# "; color: var(--accent); }
+
+  #quiz-body { padding: 20px 24px 28px; }
+
+  .progress-wrap {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .progress-bar {
+    flex: 1; height: 6px; background: #0d1319; border: 1px solid var(--panel-border);
+    border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill { height: 100%; background: var(--accent); transition: width 0.25s ease; }
+
+  .section-tag {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .source-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-left: 8px;
+  }
+
+  .question-text {
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+  .question-text .qnum { color: var(--accent); margin-right: 6px; }
+
+  .multi-note {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin: -8px 0 14px;
+    font-style: italic;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    display: flex; align-items: center; gap: 12px;
+    background: #0d1319;
+    border: 1px solid var(--panel-border);
+    border-radius: 5px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    font-size: 13.5px;
+  }
+  .option:hover { border-color: var(--accent-dim); background: #121a24; }
+  .option .letter {
+    flex: 0 0 auto;
+    width: 22px; height: 22px;
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11.5px; color: var(--text-dim);
+  }
+  .option.selected { border-color: var(--accent); background: rgba(255,131,0,0.08); }
+  .option.selected .letter { border-color: var(--accent); color: var(--accent); }
+  .option.correct { border-color: var(--correct); background: rgba(46,204,113,0.08); }
+  .option.correct .letter { border-color: var(--correct); color: var(--correct); background: rgba(46,204,113,0.15); }
+  .option.incorrect { border-color: var(--incorrect); background: rgba(231,76,60,0.08); }
+  .option.incorrect .letter { border-color: var(--incorrect); color: var(--incorrect); background: rgba(231,76,60,0.15); }
+  .option.disabled { cursor: default; }
+
+  .controls {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 20px;
+  }
+  button {
+    font-family: var(--mono);
+    background: #0d1319;
+    color: var(--accent);
+    border: 1px solid var(--accent-dim);
+    padding: 9px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12.5px;
+    letter-spacing: 0.5px;
+    transition: background 0.15s ease;
+  }
+  button:hover:not(:disabled) { background: rgba(255,131,0,0.12); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #0a0e14; font-weight: bold; }
+  button.primary:hover:not(:disabled) { background: #ff9420; }
+
+  .feedback {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct { background: rgba(46,204,113,0.08); border: 1px solid var(--correct); color: #a8e6bc; }
+  .feedback.incorrect { background: rgba(231,76,60,0.08); border: 1px solid var(--incorrect); color: #f3b3ac; }
+
+  #results {
+    display: none;
+    padding: 30px 24px;
+  }
+  #results.show { display: block; }
+  #results .score {
+    font-size: 42px;
+    color: var(--accent);
+    margin: 10px 0;
+    text-align: center;
+  }
+  #results .score-label { color: var(--text-dim); font-size: 13px; text-align: center; }
+  #results .results-sub { color: var(--text-dim); font-size: 12px; text-align: center; margin-top: 4px; }
+
+  .report-heading {
+    margin: 26px 0 10px;
+    color: var(--accent);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+  .weak-row {
+    background: #0d1319;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+  }
+  .weak-row .weak-top { display: flex; justify-content: space-between; align-items: center; }
+  .weak-row .weak-code { color: var(--accent); font-weight: bold; margin-right: 8px; }
+  .weak-row .weak-label { color: var(--text); }
+  .weak-row .weak-score { color: var(--text-dim); }
+  .weak-row .weak-score.low { color: var(--incorrect); }
+  .weak-row .weak-score.mid { color: var(--warn); }
+  .weak-row .weak-score.high { color: var(--correct); }
+  .weak-row .weak-pointer { color: var(--text-dim); font-size: 11.5px; margin-top: 6px; }
+  .weak-row.gap { border-color: var(--warn); }
+  .weak-row.gap .weak-code { color: var(--warn); }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="console">
+  <div class="titlebar">
+    <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    <span class="label">pre_assessment.sh — HPE7-A08 Study Series (diagnostic)</span>
+  </div>
+
+  <div class="header">
+    <h1>PRE-ASSESSMENT — DIAGNOSTIC EXAM</h1>
+    <div class="sub">HPE7-A08 Switching Professional &nbsp;|&nbsp; Take before starting module study &nbsp;|&nbsp; No pass threshold</div>
+    <div class="prompt-line">initiate --pre-assessment --questions=30 --mode=diagnostic</div>
+  </div>
+
+  <div id="quiz-body">
+    <div class="progress-wrap">
+      <span id="progress-text">Question 1 / 30</span>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <span id="score-live">Score: 0</span>
+    </div>
+
+    <div class="section-tag" id="section-tag">SUB-OBJECTIVE</div><span class="source-tag" id="source-tag"></span>
+    <div class="question-text"><span class="qnum" id="qnum">Q1.</span><span id="qtext"></span></div>
+    <div class="multi-note" id="multi-note" style="display:none;">(Select all that apply)</div>
+
+    <div class="options" id="options"></div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="controls">
+      <button id="btn-reset">reset --all</button>
+      <button class="primary" id="btn-submit" disabled>submit --answer</button>
+      <button class="primary" id="btn-next" style="display:none;">next --question</button>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="section-tag">DIAGNOSTIC COMPLETE</div>
+    <div class="score" id="final-score">0 / 30</div>
+    <div class="score-label">OVERALL SCORE</div>
+    <div class="results-sub">This is a diagnostic tool, not a pass/fail exam — use the report below to decide where to start studying.</div>
+
+    <div class="report-heading">WEAK-AREA REPORT — sorted, lowest score first</div>
+    <div id="weak-report"></div>
+
+    <div class="report-heading">FLAGGED COVERAGE GAPS — not diagnosed by this tool</div>
+    <div id="gap-report"></div>
+
+    <button class="primary" id="btn-restart" style="margin-top:16px;">restart --diagnostic</button>
+  </div>
+</div>
+
+<script>
+const SUBOBJ = {
+  "1a": { label: "Portfolio / product knowledge", modules: "M1" },
+  "1b": { label: "Design / requirements scenario", modules: "M2, M3, M4 (design-decision sections)" },
+  "2a": { label: "Central provisioning", modules: "M9" },
+  "2b": { label: "Direct CLI config", modules: "M2, M3" },
+  "2d": { label: "Layer 2 technologies", modules: "M2" },
+  "2e": { label: "Layer 3 routing / overlays", modules: "M3, M4" },
+  "2f": { label: "Multicast", modules: "M5" },
+  "2g": { label: "Switch security features", modules: "M2, M3, M6, M7" },
+  "2h": { label: "QoS", modules: "M6" },
+  "2i": { label: "Solutions integration (segmentation)", modules: "M1, M8" },
+  "3a": { label: "Identify the failure", modules: "M7, M8" },
+  "3b": { label: "Determine remediation", modules: "M2, M4" },
+  "3c": { label: "Cause of a performance problem", modules: "M6" },
+  "4a": { label: "Config management strategy", modules: "M2, M8" },
+  "4b": { label: "Interpret operational data", modules: "M1" },
+  "4c": { label: "Programmatic audit / config", modules: "M1, M9" },
+};
+const GAPS = [
+  { code: "2c", label: "Physical config", note: "Zero surplus questions available anywhere in the source material — a pre-existing thin spot, not something this tool measures." },
+  { code: "1b", label: "Design / requirements scenario", note: "Only 1 question available (most design-scenario content was already claimed by the Cumulative Practice Exam) — treat any signal here as inconclusive." },
+  { code: "2a", label: "Central provisioning", note: "Only 1 question available (Module 9's Central-API content is mostly consumed by the Cumulative Practice Exam) — treat any signal here as inconclusive." },
+];
+
+const QUESTIONS = [
+  { subObj: "1a", src: "M1-A6", num: "Q1", multi: false,
+    text: "Which switch virtualization technology maintains separate control and management planes per switch, specifically to avoid a \"shared fate\" risk?",
+    options: ["VSF", "VRRP", "VSX", "LACP"],
+    correct: [2], explain: "VSX maintains separate control and management planes per switch, specifically to mitigate the \"shared fate\" risk of a single common control/management plane." },
+  { subObj: "1a", src: "M1-A7", num: "Q2", multi: true,
+    text: "VSF is supported on which of the following platforms? (Select all that apply)",
+    options: ["CX 6200 Series", "CX 6300 Series", "CX 8400 Series", "CX 9300 Series"],
+    correct: [0,1], explain: "VSF is supported on the CX 6200 and CX 6300 Series. VSX (not VSF) is supported on CX 8400/83xx/9300/10000/6400." },
+
+  { subObj: "1b", src: "M4-Q24", num: "Q3", multi: false,
+    text: "Can BGP confederation sub-Autonomous-Systems be assigned private ASNs?",
+    options: ["No — confederation sub-ASes must always use public, IANA-assigned ASNs.", "Yes — and this is also the confirmed exam solution for a newly-integrated branch with an ASN that overlaps an existing branch's range.", "Only if the sub-AS is running eBGP exclusively.", "Private ASNs are only usable inside a VSX pair, not within a confederation."],
+    correct: [1], explain: "Confederation sub-ASes can be assigned private ASNs — also the confirmed solution for integrating a new branch whose ASN overlaps an existing branch's range." },
+
+  { subObj: "2a", src: "M9-Q21", num: "Q4", multi: false,
+    text: "What Postman feature allows front-end developers to begin work before the back end is fully implemented?",
+    options: ["Context switching", "Mock servers, which simulate API responses", "Automated documentation generation", "Collections shared across teams"],
+    correct: [1], explain: "Mock servers are the confirmed Postman feature enabling parallel front-end work." },
+
+  { subObj: "2b", src: "M2-Q9", num: "Q5", multi: false,
+    text: "What is the default link-up delay timer after a VSX switch reboots, and what is the configurable maximum?",
+    options: ["Default 60 seconds, maximum 180 seconds.", "Default 180 seconds, maximum 600 seconds.", "Default 20 seconds, maximum 180 seconds.", "Default 300 seconds, maximum 900 seconds."],
+    correct: [1], explain: "Default 180 seconds, configurable up to a maximum of 600 seconds." },
+  { subObj: "2b", src: "M3-Q23", num: "Q6", multi: false,
+    text: "What happens to an interface's existing IP configuration when it is moved to a non-default VRF via vrf attach?",
+    options: ["The IP configuration is automatically preserved and carried over.", "The IP configuration is removed the moment the interface is reattached — it must be manually re-applied afterward.", "Only the subnet mask is removed; the IP address itself is retained.", "The change is rejected unless the interface is first shut down."],
+    correct: [1], explain: "The interface's existing IP configuration is removed the moment it's reattached to a VRF via vrf attach — it must be manually re-applied afterward." },
+
+  { subObj: "2d", src: "M2-Q16", num: "Q7", multi: false,
+    text: "In a Private VLAN, what is the key difference between an Isolated secondary VLAN and a Community secondary VLAN?",
+    options: ["Isolated VLAN hosts can talk to each other; Community VLAN hosts cannot.", "Isolated VLAN hosts can only reach the primary VLAN, not each other; Community VLAN hosts can reach each other and the primary VLAN.", "There is no functional difference — both terms describe the same secondary VLAN type.", "Isolated VLANs require a promiscuous port; Community VLANs do not."],
+    correct: [1], explain: "Isolated VLAN hosts can reach only the primary VLAN, not each other; Community VLAN hosts can reach each other (within the community) and the primary VLAN." },
+  { subObj: "2d", src: "M2-Q20", num: "Q8", multi: false,
+    text: "What is the key functional difference between MSTP and RPVST+?",
+    options: ["MSTP is VLAN-aware, creating one spanning tree per VLAN; RPVST+ maps groups of VLANs to a smaller number of instances.", "MSTP maps groups of VLANs to a smaller number of spanning-tree instances (not VLAN-aware); RPVST+ creates one full spanning tree per VLAN (VLAN-aware).", "MSTP and RPVST+ are functionally identical — only the CLI syntax differs.", "RPVST+ requires a VSX pair; MSTP does not."],
+    correct: [1], explain: "MSTP is not VLAN-aware and maps VLAN groups to a smaller number of instances; RPVST+ is VLAN-aware, creating one tree per VLAN." },
+
+  { subObj: "2e", src: "M3-Q1", num: "Q9", multi: true,
+    text: "What are the three conditions a receiving router checks before forming an OSPF adjacency? (Select three.)",
+    options: ["Matching area ID, network/subnet, and hello/dead intervals.", "Matching stub area flag, authentication, and interface MTU.", "Matching VLAN ID and switch hostname.", "Matching router ID and process ID."],
+    correct: [0,1], explain: "Area ID, network/subnet, hello/dead intervals, stub area flag, authentication, and interface MTU must all match." },
+  { subObj: "2e", src: "M4-Q1", num: "Q10", multi: false,
+    text: "What kind of routing protocol is BGP, and what does it track to determine the best path?",
+    options: ["A distance-vector protocol that tracks hop count.", "A path vector protocol that tracks the sequence of Autonomous Systems a route has traversed.", "A link-state protocol that tracks link cost and builds a shared topology database.", "A hybrid protocol that tracks both hop count and link bandwidth."],
+    correct: [1], explain: "BGP is a path vector protocol that tracks the sequence of Autonomous Systems a route has traversed, not simple hop count." },
+
+  { subObj: "2f", src: "M5-Q1", num: "Q11", multi: false,
+    text: "What is the full Layer 3 multicast address range, and which portion is reserved for Local Subnetwork (link-local, non-routable) scope?",
+    options: ["224.0.0.0 through 239.255.255.255 overall; 224.0.0.0–224.0.0.255 is Local Subnetwork scope.", "224.0.0.0 through 255.255.255.255 overall; 224.0.1.0–224.0.1.255 is Local Subnetwork scope.", "192.0.0.0 through 223.255.255.255 overall; 224.0.0.0–224.0.0.255 is Local Subnetwork scope.", "224.0.0.0 through 239.255.255.255 overall; 239.0.0.0–239.255.255.255 is Local Subnetwork scope."],
+    correct: [0], explain: "224.0.0.0 through 239.255.255.255 is the full range; 224.0.0.0–224.0.0.255 is Local Subnetwork (link-local, non-routable) scope." },
+  { subObj: "2f", src: "M5-Q13", num: "Q12", multi: false,
+    text: "What is the fundamental behavioral difference between PIM Dense Mode and PIM Sparse Mode?",
+    options: ["PIM-DM forwards nothing until a Join is received (pull model); PIM-SM floods first and prunes unwanted branches (push model).", "PIM-DM floods first and prunes unwanted branches (push model); PIM-SM forwards nothing until a Join is received (pull model).", "PIM-DM and PIM-SM both flood by default, differing only in their prune-message format.", "PIM-DM requires a Rendezvous Point; PIM-SM does not."],
+    correct: [1], explain: "PIM-DM floods first and prunes (push model); PIM-SM forwards nothing until a Join is received (pull model)." },
+
+  { subObj: "2g", src: "M6-Q4", num: "Q13", multi: true,
+    text: "Which two of the following are valid actions in an Access Control List rule?",
+    options: ["Permit", "Redirect", "Deny", "Remark"],
+    correct: [0,2], explain: "\"Redirect\" and \"Remark\" are not confirmed ACL actions in source — Permit and Deny are the two valid actions." },
+  { subObj: "2g", src: "M7-Q5", num: "Q14", multi: false,
+    text: "What traffic is permitted on an 802.1X uncontrolled port before authentication succeeds?",
+    options: ["All traffic except broadcast", "DHCP and DNS only", "Only EAP/EAPoL traffic", "Any traffic tagged with the native VLAN"],
+    correct: [2], explain: "Only EAP/EAPoL traffic is allowed pre-authentication." },
+
+  { subObj: "2h", src: "M6-Q16", num: "Q15", multi: false,
+    text: "How many bits make up the CoS field, and where is it carried?",
+    options: ["6 bits, in the IP header's ToS byte", "3 bits, in the 802.1Q VLAN tag", "8 bits, in the Ethernet frame header", "3 bits, in the IP header's ToS byte"],
+    correct: [1], explain: "CoS is a 3-bit field carried in the 802.1Q VLAN tag." },
+  { subObj: "2h", src: "M6-Q21", num: "Q16", multi: false,
+    text: "What is the default QoS trust setting on AOS-CX?",
+    options: ["Trust CoS", "Trust DSCP", "Trust None", "Trust Both"],
+    correct: [2], explain: "Trust None is the confirmed default QoS trust setting." },
+
+  { subObj: "2i", src: "M8-Q2", num: "Q17", multi: false,
+    text: "How does a tunneled-node port's behavior compare to a controlled access point?",
+    options: ["It behaves identically, tunneling 802.11 frames the same way an AP does", "It stops forwarding traffic locally and tunnels 802.3 frames instead, the same general concept as an AP tunneling 802.11 frames", "It only tunnels broadcast and multicast traffic, forwarding unicast locally", "It requires a separate controller from any AP already in use"],
+    correct: [1], explain: "Tunneled-node stops local forwarding and tunnels 802.3 frames, conceptually parallel to an AP tunneling 802.11 frames." },
+  { subObj: "2i", src: "M1-A11", num: "Q18", multi: false,
+    text: "What platform does Dynamic Segmentation leverage to authenticate connecting devices and assign roles at a colorless port?",
+    options: ["Aruba Central", "ClearPass Policy Manager", "Network Analytics Engine", "VSX Fabric Manager"],
+    correct: [1], explain: "Dynamic Segmentation leverages ClearPass Policy Manager to authenticate devices and assign roles at colorless ports." },
+
+  { subObj: "3a", src: "M7-Q13", num: "Q19", multi: false,
+    text: "If a RADIUS server sends a VLAN name that doesn't exist on the switch, what happens?",
+    options: ["The switch falls back to the port's statically configured VLAN", "Authentication fails outright", "The client is placed in VLAN 1 by default", "The switch creates the VLAN automatically"],
+    correct: [1], explain: "Authentication fails outright — there is no fallback to a static VLAN." },
+  { subObj: "3a", src: "M8-Q16", num: "Q20", multi: false,
+    text: "On AOS-CX 10.4, can a gateway (secondary) role be downloaded directly to the Mobility Controller?",
+    options: ["Yes, automatically, the same as any Local User Role", "No — the role must already exist on the controller, or the user must reauthenticate a second time", "Yes, but only over a REST API connection", "No, gateway roles are not supported on AOS-CX at all"],
+    correct: [1], explain: "Confirmed AOS-CX 10.4 limitation — the role must pre-exist on the controller or require a second authentication." },
+
+  { subObj: "3b", src: "M4-Q19", num: "Q21", multi: false,
+    text: "After applying a new outbound route-map policy to a BGP neighbor, what must happen for it to take effect?",
+    options: ["Nothing — the policy applies instantly to all future and prior advertisements.", "The session must be reset (hard reset via clear bgp <neighbor>, or a soft reset) for the policy to take effect.", "The entire router must be rebooted.", "The neighbor relationship must be deleted and recreated from scratch."],
+    correct: [1], explain: "The session must be reset — hard or soft — for a new route-map policy to take effect." },
+  { subObj: "3b", src: "M2-Q10", num: "Q22", multi: false,
+    text: "In VSX configuration synchronization, where must changes be made for a feature that is opted into vsx-sync?",
+    options: ["On the secondary switch only — changes automatically propagate backward to the primary.", "On the primary switch only — changes made directly on the secondary for a synced feature are silently overwritten by the next sync.", "On either switch interchangeably, since vsx-sync merges changes bidirectionally.", "Changes must be made identically and simultaneously on both switches."],
+    correct: [1], explain: "Changes for a synced feature must be made on the primary switch only — direct secondary-switch changes are silently overwritten by the next sync." },
+
+  { subObj: "3c", src: "M6-Q25", num: "Q23", multi: false,
+    text: "How many Virtual Output Queues exist per destination port, per local priority?",
+    options: ["4", "6", "8", "16"],
+    correct: [2], explain: "Confirmed VOQ architecture detail: 8 per destination port, per local priority." },
+  { subObj: "3c", src: "M6-Q24", num: "Q24", multi: false,
+    text: "If both a multicast and a broadcast ingress rate limit are applied to the same interface, which value governs?",
+    options: ["The higher of the two values", "The lower of the two values", "The average of the two values", "The broadcast value always overrides the multicast value"],
+    correct: [1], explain: "The lower of the two configured rate-limit values governs." },
+
+  { subObj: "4a", src: "M8-Q17", num: "Q25", multi: false,
+    text: "Where is a Downloadable User Role (DUR) defined, and does it support third-party RADIUS servers?",
+    options: ["Defined on the switch; supports any RADIUS server", "Defined centrally on ClearPass; no third-party RADIUS server support exists", "Defined on the Mobility Controller; supports any RADIUS server", "Defined on ClearPass; supported by any RADIUS server with VSA extensions"],
+    correct: [1], explain: "DUR is ClearPass-only, defined centrally, with no third-party RADIUS option." },
+  { subObj: "4a", src: "M2-Q7", num: "Q26", multi: false,
+    text: "What is the mutually-exclusive relationship between Active Gateway and Active-Forwarding?",
+    options: ["They cannot both be enabled on the same SVI — Active Gateway serves end-host-facing VLANs, Active-Forwarding serves transit/upstream-facing VLANs.", "Active-Forwarding is simply an older name for Active Gateway; only one can exist per VSX pair.", "Active Gateway requires Active-Forwarding to be enabled first on the same SVI.", "They serve identical purposes and can be freely substituted for each other."],
+    correct: [0], explain: "Active Gateway (end-host-facing) and Active-Forwarding (transit/upstream-facing) are mutually exclusive on the same SVI." },
+
+  { subObj: "4b", src: "M1-B2", num: "Q27", multi: false,
+    text: "How often does an NAE agent collect monitored data?",
+    options: ["Every second", "Every 5 seconds", "Every 30 seconds", "Every 60 seconds"],
+    correct: [1], explain: "Agents collect monitored data every 5 seconds." },
+  { subObj: "4b", src: "M1-B11", num: "Q28", multi: false,
+    text: "What is the default sFlow sampling rate, and what happens if you try to configure a rate below that default?",
+    options: ["1:1024; the command is rejected outright", "1:4096; a warning message displays and requires confirmation before proceeding", "1:8192; the switch automatically restores the default", "1:2048; no warning is shown"],
+    correct: [1], explain: "Default sFlow sampling rate is 1 in every 4096 packets; a warning requires confirmation before configuring a lower rate." },
+
+  { subObj: "4c", src: "M1-A4", num: "Q29", multi: false,
+    text: "What is the confirmed example URI for retrieving the list of VLANs on a switch with IP address 10.1.1.1?",
+    options: ["10.1.1.1/api/vlans/list", "10.1.1.1/rest/v1/system/bridge/vlans", "10.1.1.1/cli/show/vlans", "10.1.1.1/rest/v1/vlans"],
+    correct: [1], explain: "Confirmed worked example: 10.1.1.1/rest/v1/system/bridge/vlans." },
+  { subObj: "4c", src: "M9-Q3", num: "Q30", multi: false,
+    text: "What must a forward slash that is part of a resource ID itself be encoded as within a URI path?",
+    options: ["%20", "%2F", "A double slash //", "A backslash \\"],
+    correct: [1], explain: "Confirmed percent-encoding for a forward slash within a resource ID is %2F." },
+];
+
+let current = 0;
+let score = 0;
+let selected = [];
+let answered = false;
+let subScores = {};
+Object.keys(SUBOBJ).forEach(k => subScores[k] = {correct:0, total:0});
+QUESTIONS.forEach(q => subScores[q.subObj].total++);
+
+const els = {
+  progressText: document.getElementById('progress-text'),
+  progressFill: document.getElementById('progress-fill'),
+  scoreLive: document.getElementById('score-live'),
+  sectionTag: document.getElementById('section-tag'),
+  sourceTag: document.getElementById('source-tag'),
+  qnum: document.getElementById('qnum'),
+  qtext: document.getElementById('qtext'),
+  multiNote: document.getElementById('multi-note'),
+  options: document.getElementById('options'),
+  feedback: document.getElementById('feedback'),
+  btnSubmit: document.getElementById('btn-submit'),
+  btnNext: document.getElementById('btn-next'),
+  btnReset: document.getElementById('btn-reset'),
+  results: document.getElementById('results'),
+  quizBody: document.getElementById('quiz-body'),
+  finalScore: document.getElementById('final-score'),
+  weakReport: document.getElementById('weak-report'),
+  gapReport: document.getElementById('gap-report'),
+  btnRestart: document.getElementById('btn-restart'),
+};
+
+function renderQuestion() {
+  const q = QUESTIONS[current];
+  selected = [];
+  answered = false;
+
+  els.progressText.textContent = `Question ${current + 1} / ${QUESTIONS.length}`;
+  els.progressFill.style.width = `${((current) / QUESTIONS.length) * 100}%`;
+  els.scoreLive.textContent = `Score: ${score}`;
+  els.sectionTag.textContent = `${q.subObj} — ${SUBOBJ[q.subObj].label}`;
+  els.sourceTag.textContent = `source: ${q.src}`;
+  els.qnum.textContent = q.num + ".";
+  els.qtext.textContent = q.text;
+  els.multiNote.style.display = q.multi ? "block" : "none";
+
+  els.options.innerHTML = "";
+  const letters = ["A","B","C","D"];
+  q.options.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = "option";
+    div.innerHTML = `<div class="letter">${letters[i]}</div><div>${opt}</div>`;
+    div.addEventListener('click', () => toggleOption(i, div));
+    els.options.appendChild(div);
+  });
+
+  els.feedback.className = "feedback";
+  els.feedback.innerHTML = "";
+  els.btnSubmit.style.display = "inline-block";
+  els.btnSubmit.disabled = true;
+  els.btnNext.style.display = "none";
+}
+
+function toggleOption(i, div) {
+  if (answered) return;
+  const q = QUESTIONS[current];
+  if (q.multi) {
+    const idx = selected.indexOf(i);
+    if (idx > -1) { selected.splice(idx, 1); div.classList.remove('selected'); }
+    else { selected.push(i); div.classList.add('selected'); }
+  } else {
+    document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+    selected = [i];
+    div.classList.add('selected');
+  }
+  els.btnSubmit.disabled = selected.length === 0;
+}
+
+function submitAnswer() {
+  if (answered || selected.length === 0) return;
+  answered = true;
+  const q = QUESTIONS[current];
+  const correctSet = new Set(q.correct);
+  const selectedSet = new Set(selected);
+  const isCorrect = correctSet.size === selectedSet.size && [...correctSet].every(v => selectedSet.has(v));
+
+  const optionDivs = document.querySelectorAll('.option');
+  optionDivs.forEach((div, i) => {
+    div.classList.add('disabled');
+    if (correctSet.has(i)) div.classList.add('correct');
+    else if (selectedSet.has(i)) div.classList.add('incorrect');
+  });
+
+  if (isCorrect) {
+    score++;
+    subScores[q.subObj].correct++;
+  }
+  els.scoreLive.textContent = `Score: ${score}`;
+
+  els.feedback.className = "feedback show " + (isCorrect ? "correct" : "incorrect");
+  els.feedback.innerHTML = `<strong>${isCorrect ? "✓ CORRECT" : "✗ INCORRECT"}</strong><br>${q.explain}`;
+
+  els.btnSubmit.style.display = "none";
+  els.btnNext.style.display = "inline-block";
+  els.btnNext.textContent = (current === QUESTIONS.length - 1) ? "view --report" : "next --question";
+}
+
+function nextQuestion() {
+  if (current === QUESTIONS.length - 1) {
+    showResults();
+    return;
+  }
+  current++;
+  renderQuestion();
+}
+
+function showResults() {
+  els.quizBody.style.display = "none";
+  els.results.classList.add('show');
+  els.finalScore.textContent = `${score} / ${QUESTIONS.length}`;
+
+  const rows = Object.keys(SUBOBJ).map(code => {
+    const s = subScores[code];
+    const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : null;
+    return { code, label: SUBOBJ[code].label, modules: SUBOBJ[code].modules, correct: s.correct, total: s.total, pct };
+  }).sort((a, b) => a.pct - b.pct);
+
+  els.weakReport.innerHTML = rows.map(r => {
+    const cls = r.pct < 50 ? "low" : (r.pct < 100 ? "mid" : "high");
+    return `<div class="weak-row">
+      <div class="weak-top">
+        <span><span class="weak-code">${r.code}</span><span class="weak-label">${r.label}</span></span>
+        <span class="weak-score ${cls}">${r.correct}/${r.total} (${r.pct}%)</span>
+      </div>
+      <div class="weak-pointer">review: ${r.modules}</div>
+    </div>`;
+  }).join('');
+
+  els.gapReport.innerHTML = GAPS.map(g => `<div class="weak-row gap">
+      <div class="weak-top">
+        <span><span class="weak-code">${g.code}</span><span class="weak-label">${g.label}</span></span>
+      </div>
+      <div class="weak-pointer">${g.note}</div>
+    </div>`).join('');
+}
+
+function resetAll() {
+  current = 0;
+  score = 0;
+  subScores = {};
+  Object.keys(SUBOBJ).forEach(k => subScores[k] = {correct:0, total:0});
+  QUESTIONS.forEach(q => subScores[q.subObj].total++);
+  els.results.classList.remove('show');
+  els.quizBody.style.display = "block";
+  renderQuestion();
+}
+
+els.btnSubmit.addEventListener('click', submitAnswer);
+els.btnNext.addEventListener('click', nextQuestion);
+els.btnReset.addEventListener('click', resetAll);
+els.btnRestart.addEventListener('click', resetAll);
+
+renderQuestion();
+</script>
+
+</body>
+</html>

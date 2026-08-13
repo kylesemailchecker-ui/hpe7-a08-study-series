@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Config Lab — Module 2: VSX &amp; Layer 2 Optimization</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #10161f;
+    --panel-border: #1e2a3a;
+    --accent: #ff8300;
+    --accent-dim: #b35c00;
+    --text: #d7e0ea;
+    --text-dim: #7c8a9c;
+    --correct: #2ecc71;
+    --incorrect: #e74c3c;
+    --warn: #f1c40f;
+    --mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    margin: 0;
+    padding: 24px;
+    background-image:
+      linear-gradient(rgba(30,42,58,0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,42,58,0.35) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .console {
+    max-width: 880px;
+    margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(255,131,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.02);
+  }
+  .titlebar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-border);
+    background: linear-gradient(180deg, #131b26, #0d1319);
+    border-radius: 8px 8px 0 0;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #e74c3c; } .dot.y { background: #f1c40f; } .dot.g { background: #2ecc71; }
+  .titlebar span.label { margin-left: 8px; color: var(--text-dim); font-size: 12px; letter-spacing: 0.5px; }
+
+  .header { padding: 20px 24px 8px; border-bottom: 1px dashed var(--panel-border); }
+  .header h1 { color: var(--accent); font-size: 18px; margin: 0 0 4px; letter-spacing: 0.5px; }
+  .header .sub { color: var(--text-dim); font-size: 12.5px; }
+  .prompt-line { color: var(--accent-dim); font-size: 12px; margin-top: 10px; }
+  .prompt-line::before { content: "root@aos-cx-switch:~# "; color: var(--accent); }
+
+  #lab-body { padding: 20px 24px 28px; }
+
+  .progress-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; font-size: 12px; color: var(--text-dim); }
+  .progress-bar { flex: 1; height: 6px; background: #0d1319; border: 1px solid var(--panel-border); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); transition: width 0.25s ease; }
+
+  .lab-tag { display: inline-block; font-size: 11px; color: var(--accent); border: 1px solid var(--accent-dim); padding: 2px 8px; border-radius: 3px; margin-bottom: 8px; letter-spacing: 0.5px; }
+  .source-tag { display: inline-block; font-size: 10.5px; color: var(--text-dim); margin-left: 8px; }
+
+  .scenario { font-size: 14px; line-height: 1.55; margin-bottom: 12px; color: var(--text); }
+
+  .hint-row { margin: -4px 0 14px; }
+  .hint-row button { padding: 6px 14px; font-size: 11.5px; }
+  .hint-box {
+    display: none;
+    font-size: 12px; line-height: 1.55; color: var(--text-dim); font-style: italic;
+    background: #0d1319; border: 1px solid var(--panel-border); border-radius: 5px;
+    padding: 10px 12px; margin: -6px 0 16px;
+  }
+  .hint-box.show { display: block; }
+
+  .zones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 620px) { .zones { grid-template-columns: 1fr; } }
+
+  .zone { background: #0d1319; border: 1px solid var(--panel-border); border-radius: 6px; padding: 12px; min-height: 220px; }
+  .zone-label { font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px; margin-bottom: 10px; text-transform: uppercase; }
+  .zone.dragover { border-color: var(--accent); background: rgba(255,131,0,0.05); }
+
+  .tile-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
+  .tile {
+    background: #131b26; border: 1px solid var(--panel-border); border-radius: 5px;
+    padding: 9px 12px; font-size: 12.5px; cursor: grab; user-select: none;
+    transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tile:hover { border-color: var(--accent-dim); }
+  .tile .grip { color: var(--text-dim); flex: 0 0 auto; }
+  .tile .txt { flex: 1; white-space: pre; overflow-x: auto; }
+  .tile.dragging { opacity: 0.35; }
+  .tile.correct-pos { border-color: var(--correct); background: rgba(46,204,113,0.08); }
+  .tile.wrong-pos { border-color: var(--incorrect); background: rgba(231,76,60,0.08); }
+  .tile-index { color: var(--accent); font-size: 11px; width: 16px; flex: 0 0 auto; }
+
+  .placeholder { color: var(--text-dim); font-size: 11.5px; font-style: italic; padding: 8px; }
+
+  .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; flex-wrap: wrap; gap: 10px; }
+  button {
+    font-family: var(--mono); background: #0d1319; color: var(--accent);
+    border: 1px solid var(--accent-dim); padding: 9px 18px; border-radius: 5px;
+    cursor: pointer; font-size: 12.5px; letter-spacing: 0.5px; transition: background 0.15s ease;
+  }
+  button:hover:not(:disabled) { background: rgba(255,131,0,0.12); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #0a0e14; font-weight: bold; }
+  button.primary:hover:not(:disabled) { background: #ff9420; }
+  button.ghost { background: transparent; border-color: var(--panel-border); color: var(--text-dim); }
+
+  .feedback { margin-top: 16px; padding: 12px 14px; border-radius: 5px; font-size: 12.5px; line-height: 1.6; display: none; white-space: pre-wrap; }
+  .feedback.show { display: block; }
+  .feedback.correct { background: rgba(46,204,113,0.08); border: 1px solid var(--correct); color: #a8e6bc; }
+  .feedback.incorrect { background: rgba(231,76,60,0.08); border: 1px solid var(--incorrect); color: #f3b3ac; }
+  .feedback .answer-key { color: var(--text-dim); margin-top: 8px; }
+  .feedback .answer-key code { color: var(--text); }
+
+  #results { display: none; padding: 30px 24px; text-align: center; }
+  #results.show { display: block; }
+  #results .score { font-size: 36px; color: var(--accent); margin: 10px 0; }
+  #results .score-label { color: var(--text-dim); font-size: 13px; }
+  #results .recap { margin: 22px 0; text-align: left; background: #0d1319; border: 1px solid var(--panel-border); border-radius: 6px; padding: 14px 18px; font-size: 12.5px; }
+  #results .recap div { padding: 5px 0; display: flex; justify-content: space-between; gap: 12px; }
+  #results .recap .lab-name { color: var(--text-dim); }
+  #results .recap .lab-result.pass { color: var(--correct); }
+  #results .recap .lab-result.fail { color: var(--incorrect); }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="console">
+  <div class="titlebar">
+    <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    <span class="label">m2_interactive_lab.sh — VSX &amp; Layer 2 Config/Diagnostic Practice</span>
+  </div>
+
+  <div class="header">
+    <h1>MODULE 2 — INTERACTIVE CONFIG LAB (VSX &amp; LAYER 2)</h1>
+    <div class="sub">Drag-and-drop CLI ordering practice &nbsp;|&nbsp; supplements M2 - Assessment.md &nbsp;|&nbsp; not exam-format simulation</div>
+    <div class="prompt-line">initiate --config-lab --module=2 --topic=vsx-l2 --labs=6</div>
+  </div>
+
+  <div id="lab-body">
+    <div class="progress-wrap">
+      <span id="progress-text">Lab 1 / 6</span>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="lab-tag" id="lab-tag">VSX ISL SETUP</div><span class="source-tag" id="source-tag"></span>
+    <div class="scenario" id="scenario"></div>
+
+    <div class="hint-row"><button class="ghost" id="btn-hint">show --hint</button></div>
+    <div class="hint-box" id="hint-box"></div>
+
+    <div class="zones">
+      <div class="zone" id="bank-zone">
+        <div class="zone-label">Command bank (drag or click to add)</div>
+        <ul class="tile-list" id="bank-list"></ul>
+      </div>
+      <div class="zone" id="answer-zone">
+        <div class="zone-label">Your sequence (drag to reorder)</div>
+        <ul class="tile-list" id="answer-list"></ul>
+        <div class="placeholder" id="answer-placeholder">Drop or click command tiles here, in order.</div>
+      </div>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="controls">
+      <button class="ghost" id="btn-reset-lab">reset --lab</button>
+      <div style="display:flex; gap:10px;">
+        <button class="primary" id="btn-check">check --sequence</button>
+        <button class="primary" id="btn-next" style="display:none;">next --lab</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="lab-tag">ALL LABS COMPLETE</div>
+    <div class="score" id="final-score">0 / 6</div>
+    <div class="score-label">LABS SOLVED CORRECTLY ON FIRST CHECK</div>
+    <div class="recap" id="recap"></div>
+    <button class="primary" id="btn-restart">restart --all-labs</button>
+  </div>
+</div>
+
+<script>
+// Every command tile below is reproduced verbatim from "M2 - Mastery.md" (Sections 1-2, 3, 6, 7).
+// No CLI is invented. Distractor tiles reuse real, confirmed commands from elsewhere in M2's own
+// docs, applied to the wrong exercise — same sourcing discipline as the module's Assessment
+// (per SOP Section 10.7), extended to this interactive-lab format (Section 10.9a).
+
+const LABS = [
+  {
+    tag: "VSX ISL SETUP",
+    src: "M2 - Mastery §1",
+    scenario: "You're bringing up a VSX pair on one of the two switches. Create the Inter-Switch Link as LAG 256, assign a member port to it, then enter VSX context and define this switch as the primary with a shared system MAC.",
+    hint: "The LAG must exist before a port can be assigned to it, and before VSX can reference it as the ISL — that dependency drives the order here.",
+    bank: [
+      { id: "a", text: "interface lag 256" },
+      { id: "b", text: "lacp mode active" },
+      { id: "c", text: "interface 1/1/1" },
+      { id: "d", text: "lag 256" },
+      { id: "e", text: "vsx" },
+      { id: "f", text: "inter-switch-link lag 256" },
+      { id: "g", text: "role primary" },
+      { id: "h", text: "system-mac 02:01:00:00:01:00" },
+    ],
+    correct: ["a","b","c","d","e","f","g","h"],
+    explain: "LAG 256 is created and set to active LACP mode first, then a physical port is assigned to it. Only after the LAG exists can VSX context reference it as the inter-switch-link. system-mac must be identical on both switches — a mismatch here is the confirmed cause of an Out-Of-Sync pair."
+  },
+  {
+    tag: "VSX KEEPALIVE (DIRECT LINK)",
+    src: "M2 - Mastery §2",
+    scenario: "Configure the VSX keepalive using a dedicated VRF and a directly-connected link on the primary switch (interface 1/1/3, address 192.168.255.0/31, peer 192.168.255.1).",
+    hint: "vrf attach strips any existing IP configuration — that's why the IP address is applied after vrf attach, not before (the same pattern as vrf attach in other modules' L3 content).",
+    bank: [
+      { id: "a", text: "vrf KEEPALIVE-VRF" },
+      { id: "b", text: "interface 1/1/3" },
+      { id: "c", text: "vrf attach KEEPALIVE-VRF" },
+      { id: "d", text: "ip address 192.168.255.0/31" },
+      { id: "e", text: "vsx" },
+      { id: "f", text: "keepalive peer 192.168.255.1 source 192.168.255.0 vrf KEEPALIVE-VRF" },
+    ],
+    correct: ["a","b","c","d","e","f"],
+    explain: "The dedicated VRF is created first, then the keepalive interface is attached to it, then the IP address is (re-)applied. Only then does the vsx context's keepalive command reference that VRF, source, and peer address. show vsx configuration keepalive confirms the result; show vsx status keepalive vsx-peer should report Established once both switches are configured."
+  },
+  {
+    tag: "VSX ACTIVE GATEWAY",
+    src: "M2 - Mastery §3",
+    scenario: "Configure Active Gateway on VLAN 100's SVI, with a shared virtual MAC and virtual IP, and sync the configuration to the VSX peer.",
+    hint: "Active Gateway and VRRP are mutually exclusive on the same SVI — don't combine them.",
+    bank: [
+      { id: "a", text: "interface vlan 100" },
+      { id: "b", text: "ip address 10.1.100.1/24" },
+      { id: "c", text: "active-gateway ip mac 02:01:00:00:01:64" },
+      { id: "d", text: "active-gateway ip 10.1.100.254" },
+      { id: "e", text: "vsx-sync active-gateways policies" },
+    ],
+    correct: ["a","b","c","d","e"],
+    explain: "The SVI's own IP address is set first, then the virtual MAC and virtual (gateway) IP are defined. vsx-sync active-gateways policies syncs this configuration to the peer switch. show interface vlan 100 confirms the VIP/VMAC are applied and operational on both switches."
+  },
+  {
+    tag: "DIAGNOSE: VSX PAIR REPORTS OUT-OF-SYNC",
+    src: "M2 - Mastery §1",
+    scenario: "You just brought up a new VSX pair and show vsx status reports Out-Of-Sync. Drag the confirmed recommended verification commands into the order source recommends checking them.",
+    hint: "Work bottom-up the stack: confirm the physical/LACP layer is healthy before checking VSX-level state, and don't expect keepalive to report Established until it's actually been configured.",
+    bank: [
+      { id: "a", text: "show lacp interfaces" },
+      { id: "b", text: "show vsx status" },
+      { id: "c", text: "show vsx status keepalive vsx-peer" },
+    ],
+    correct: ["a", "b", "c"],
+    explain: "show lacp interfaces confirms the ISL member ports have reached the Up LACP state on both switches first. show vsx status then confirms ISL channel state (In-Sync/Out-Of-Sync), and whether Local and Peer System MAC and Device Role match — a mismatched system-mac or ISL LAG ID is the confirmed cause of Out-Of-Sync. show vsx status keepalive vsx-peer is checked last, since it's expected to report \"VSX Peer not reachable\" until keepalive is separately configured."
+  },
+  {
+    tag: "DIAGNOSE: UDLD-BLOCKED PORT WON'T RECOVER",
+    src: "M2 - Mastery §6",
+    scenario: "A third-party-interconnected port running UDLD in RFC 5171 aggressive mode has been stuck Blocked, and three auto-recovery attempts have already been exhausted. Cabling and the remote device's UDLD configuration have both already been confirmed fine. Drag the commands needed to manually reset the port's retry counter, in order. Not all tiles apply.",
+    hint: "For RFC 5171 aggressive mode specifically, exhausting the auto-recovery attempts requires a manual toggle to reset the retry limit — source confirms this explicitly.",
+    bank: [
+      { id: "a", text: "interface 1/1/16" },
+      { id: "b", text: "no udld" },
+      { id: "c", text: "udld" },
+      { id: "d", text: "spanning-tree bpdu-guard" },
+      { id: "e", text: "loop-protect action tx-rx-disable" },
+    ],
+    correct: ["a", "b", "c"],
+    explain: "Enter the interface, then disable and re-enable UDLD (no udld / udld) to manually reset the retry counter — the confirmed fix once three RFC 5171 aggressive-mode auto-recovery attempts are exhausted. spanning-tree bpdu-guard and loop-protect action tx-rx-disable are both real M2 commands, but they configure different STP-safeguard features entirely — not the fix for a UDLD-blocked port."
+  },
+  {
+    tag: "PRIVATE VLAN — PRIMARY + ISOLATED SECONDARY",
+    src: "M2 - Mastery §7",
+    scenario: "Configure a Private VLAN: primary VLAN 50, an isolated secondary VLAN 51 associated with it, and assign port 1/1/20 as a secondary port on VLAN 51.",
+    hint: "The primary VLAN must be declared private-vlan primary before any secondary VLAN can reference it — configuring the secondary first is the confirmed cause of the pvlan_no_primary error.",
+    bank: [
+      { id: "a", text: "vlan 50" },
+      { id: "b", text: "private-vlan primary" },
+      { id: "c", text: "vlan 51" },
+      { id: "d", text: "private-vlan isolated primary-vlan 50" },
+      { id: "e", text: "interface 1/1/20" },
+      { id: "f", text: "vlan access 51" },
+      { id: "g", text: "private-vlan port-type secondary" },
+    ],
+    correct: ["a","b","c","d","e","f","g"],
+    explain: "VLAN 50 is created and marked private-vlan primary first. VLAN 51 is then created as an isolated secondary, explicitly referencing primary-vlan 50 — this reference is why the primary must already exist. The port is then placed on VLAN 51 and marked as a secondary port. If a VLAN goes down with reason code pvlan_no_primary (visible via show event -r -d vland), it means this order was violated."
+  },
+];
+
+let currentLab = 0;
+let checked = false;
+let labResults = [];
+
+const els = {
+  progressText: document.getElementById('progress-text'),
+  progressFill: document.getElementById('progress-fill'),
+  labTag: document.getElementById('lab-tag'),
+  sourceTag: document.getElementById('source-tag'),
+  scenario: document.getElementById('scenario'),
+  hintBox: document.getElementById('hint-box'),
+  btnHint: document.getElementById('btn-hint'),
+  bankList: document.getElementById('bank-list'),
+  answerList: document.getElementById('answer-list'),
+  answerPlaceholder: document.getElementById('answer-placeholder'),
+  bankZone: document.getElementById('bank-zone'),
+  answerZone: document.getElementById('answer-zone'),
+  feedback: document.getElementById('feedback'),
+  btnCheck: document.getElementById('btn-check'),
+  btnNext: document.getElementById('btn-next'),
+  btnResetLab: document.getElementById('btn-reset-lab'),
+  labBody: document.getElementById('lab-body'),
+  results: document.getElementById('results'),
+  finalScore: document.getElementById('final-score'),
+  recap: document.getElementById('recap'),
+  btnRestart: document.getElementById('btn-restart'),
+};
+
+let draggedId = null;
+let draggedFrom = null;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function renderLab() {
+  const lab = LABS[currentLab];
+  checked = false;
+
+  els.progressText.textContent = `Lab ${currentLab + 1} / ${LABS.length}`;
+  els.progressFill.style.width = `${(currentLab / LABS.length) * 100}%`;
+  els.labTag.textContent = lab.tag;
+  els.sourceTag.textContent = `source: ${lab.src}`;
+  els.scenario.innerHTML = lab.scenario;
+  els.hintBox.textContent = lab.hint;
+  els.hintBox.classList.remove('show');
+  els.btnHint.textContent = "show --hint";
+
+  lab._bankOrder = shuffle(lab.bank.map(t => t.id));
+  lab._answerOrder = [];
+
+  els.feedback.className = "feedback";
+  els.feedback.innerHTML = "";
+  els.btnCheck.disabled = true;
+  els.btnCheck.style.display = "inline-block";
+  els.btnNext.style.display = "none";
+
+  renderZones();
+}
+
+function tileById(lab, id) { return lab.bank.find(t => t.id === id); }
+
+function renderZones() {
+  const lab = LABS[currentLab];
+  els.bankList.innerHTML = "";
+  els.answerList.innerHTML = "";
+
+  lab._bankOrder.forEach(id => {
+    els.bankList.appendChild(makeTile(lab, id, 'bank'));
+  });
+  lab._answerOrder.forEach((id, idx) => {
+    els.answerList.appendChild(makeTile(lab, id, 'answer', idx));
+  });
+
+  els.answerPlaceholder.style.display = lab._answerOrder.length === 0 ? "block" : "none";
+  els.btnCheck.disabled = lab._answerOrder.length === 0 || checked;
+}
+
+function makeTile(lab, id, from, idx) {
+  const t = tileById(lab, id);
+  const li = document.createElement('li');
+  li.className = "tile";
+  li.draggable = true;
+  li.dataset.id = id;
+  li.dataset.from = from;
+  const idxHtml = from === 'answer' ? `<span class="tile-index">${idx + 1}.</span>` : `<span class="grip">::</span>`;
+  li.innerHTML = `${idxHtml}<span class="txt">${t.text}</span>`;
+
+  li.addEventListener('dragstart', () => {
+    draggedId = id;
+    draggedFrom = from;
+    li.classList.add('dragging');
+  });
+  li.addEventListener('dragend', () => li.classList.remove('dragging'));
+
+  li.addEventListener('click', () => {
+    if (checked) return;
+    const lab = LABS[currentLab];
+    if (from === 'bank') {
+      lab._bankOrder = lab._bankOrder.filter(x => x !== id);
+      lab._answerOrder.push(id);
+    } else {
+      lab._answerOrder = lab._answerOrder.filter(x => x !== id);
+      lab._bankOrder.push(id);
+    }
+    renderZones();
+  });
+
+  return li;
+}
+
+function insertionIndex(container, clientY) {
+  const items = [...container.querySelectorAll('.tile:not(.dragging)')];
+  for (let i = 0; i < items.length; i++) {
+    const rect = items[i].getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) return i;
+  }
+  return items.length;
+}
+
+[els.bankZone, els.answerZone].forEach(zone => {
+  zone.addEventListener('dragover', (e) => {
+    if (checked) return;
+    e.preventDefault();
+    zone.classList.add('dragover');
+  });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', (e) => {
+    if (checked) return;
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if (draggedId === null) return;
+    const lab = LABS[currentLab];
+    const targetList = zone === els.bankZone ? 'bank' : 'answer';
+    const list = zone === els.bankZone ? els.bankList : els.answerList;
+    const idx = insertionIndex(list, e.clientY);
+
+    lab._bankOrder = lab._bankOrder.filter(x => x !== draggedId);
+    lab._answerOrder = lab._answerOrder.filter(x => x !== draggedId);
+
+    if (targetList === 'bank') {
+      lab._bankOrder.splice(idx, 0, draggedId);
+    } else {
+      lab._answerOrder.splice(idx, 0, draggedId);
+    }
+    draggedId = null;
+    draggedFrom = null;
+    renderZones();
+  });
+});
+
+function checkSequence() {
+  const lab = LABS[currentLab];
+  checked = true;
+  const isCorrect = lab._answerOrder.length === lab.correct.length &&
+    lab._answerOrder.every((id, i) => id === lab.correct[i]);
+
+  [...els.answerList.children].forEach((li, i) => {
+    const id = lab._answerOrder[i];
+    if (lab.correct[i] === id) li.classList.add('correct-pos');
+    else li.classList.add('wrong-pos');
+  });
+
+  labResults[currentLab] = isCorrect;
+
+  els.feedback.className = "feedback show " + (isCorrect ? "correct" : "incorrect");
+  let html = `<strong>${isCorrect ? "✓ CORRECT SEQUENCE" : "✗ NOT QUITE"}</strong><br>${lab.explain}`;
+  if (!isCorrect) {
+    const correctText = lab.correct.map(id => tileById(lab, id).text).join('\n');
+    html += `<div class="answer-key">Correct sequence:\n<code>${correctText}</code></div>`;
+  }
+  els.feedback.innerHTML = html;
+
+  els.btnCheck.style.display = "none";
+  els.btnNext.style.display = "inline-block";
+  els.btnNext.textContent = (currentLab === LABS.length - 1) ? "view --summary" : "next --lab";
+}
+
+function nextLab() {
+  if (currentLab === LABS.length - 1) {
+    showResults();
+    return;
+  }
+  currentLab++;
+  renderLab();
+}
+
+function resetLab() {
+  if (checked) return;
+  const lab = LABS[currentLab];
+  lab._bankOrder = shuffle(lab.bank.map(t => t.id));
+  lab._answerOrder = [];
+  renderZones();
+}
+
+function showResults() {
+  els.labBody.style.display = "none";
+  els.results.classList.add('show');
+  const score = labResults.filter(Boolean).length;
+  els.finalScore.textContent = `${score} / ${LABS.length}`;
+  els.recap.innerHTML = LABS.map((lab, i) => {
+    const pass = labResults[i];
+    return `<div><span class="lab-name">${i+1}. ${lab.tag}</span><span class="lab-result ${pass ? 'pass' : 'fail'}">${pass ? 'CORRECT' : 'RETRY NEEDED'}</span></div>`;
+  }).join('');
+}
+
+function restartAll() {
+  currentLab = 0;
+  labResults = [];
+  els.results.classList.remove('show');
+  els.labBody.style.display = "block";
+  renderLab();
+}
+
+function toggleHint() {
+  const showing = els.hintBox.classList.toggle('show');
+  els.btnHint.textContent = showing ? "hide --hint" : "show --hint";
+}
+
+els.btnCheck.addEventListener('click', checkSequence);
+els.btnNext.addEventListener('click', nextLab);
+els.btnResetLab.addEventListener('click', resetLab);
+els.btnRestart.addEventListener('click', restartAll);
+els.btnHint.addEventListener('click', toggleHint);
+
+renderLab();
+</script>
+
+</body>
+</html>
