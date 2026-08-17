@@ -201,7 +201,7 @@ const LABS = [
   {
     tag: "VSX ISL SETUP",
     src: "M2 - Mastery §1",
-    scenario: "You're bringing up a VSX pair on one of the two switches. Create the Inter-Switch Link as LAG 256, assign a member port to it, then enter VSX context and define this switch as the primary with a shared system MAC.",
+    scenario: "You're bringing up a VSX pair on one of the two switches. Create the Inter-Switch Link as LAG 256 in active LACP mode, assign a member port to it, then enter VSX context and define this switch as the primary with a shared system MAC.",
     hint: "The LAG must exist before a port can be assigned to it, and before VSX can reference it as the ISL — that dependency drives the order here.",
     bank: [
       { id: "a", text: "interface lag 256" },
@@ -235,7 +235,7 @@ const LABS = [
   {
     tag: "VSX ACTIVE GATEWAY",
     src: "M2 - Mastery §3",
-    scenario: "Configure Active Gateway on VLAN 100's SVI, with a shared virtual MAC and virtual IP, and sync the configuration to the VSX peer.",
+    scenario: "Configure VLAN 100's SVI with its own IP address, then configure Active Gateway on it with a shared virtual MAC and virtual IP, and sync the configuration to the VSX peer.",
     hint: "Active Gateway and VRRP are mutually exclusive on the same SVI — don't combine them.",
     bank: [
       { id: "a", text: "interface vlan 100" },

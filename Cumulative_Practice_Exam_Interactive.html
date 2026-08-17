@@ -469,7 +469,7 @@ const QUESTIONS = [
     options: ["DWRR — same default as every other AOS-CX platform", "Strict Priority — the only platform that supports SP at all", "FIFO — the \"no QoS\" baseline used only on this platform", "WFQ — the only platform that supports WFQ at all"],
     correct: [3], explain: "CX 8400 is the only WFQ-capable platform." },
   { section: "C", src: "M8", num: "Q54", multi: false,
-    text: "What two protocols does User-Based Tunneling use to encapsulate wireless-style traffic from a switch to a controller?",
+    text: "What two protocols does User-Based Tunneling use to encapsulate wireless-style traffic from a switch to its central tunnel endpoint (a controller or gateway)?",
     options: ["IPsec and TLS", "GRE and VXLAN", "MPLS and GRE", "VXLAN and IPsec"],
     correct: [1], explain: "GRE and VXLAN are confirmed as the two tunneling mechanisms for UBT." },
   { section: "C", src: "M9", num: "Q55", multi: false,
@@ -592,6 +592,17 @@ const els = {
   btnRestart: document.getElementById('btn-restart'),
 };
 
+let currentOrder = [];
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function renderQuestion() {
   const q = QUESTIONS[current];
   selected = [];
@@ -608,11 +619,12 @@ function renderQuestion() {
 
   els.options.innerHTML = "";
   const letters = ["A","B","C","D"];
-  q.options.forEach((opt, i) => {
+  currentOrder = shuffle(q.options.map((_, i) => i));
+  currentOrder.forEach((origI, pos) => {
     const div = document.createElement('div');
     div.className = "option";
-    div.innerHTML = `<div class="letter">${letters[i]}</div><div>${opt}</div>`;
-    div.addEventListener('click', () => toggleOption(i, div));
+    div.innerHTML = `<div class="letter">${letters[pos]}</div><div>${q.options[origI]}</div>`;
+    div.addEventListener('click', () => toggleOption(origI, div));
     els.options.appendChild(div);
   });
 
@@ -647,10 +659,11 @@ function submitAnswer() {
   const isCorrect = correctSet.size === selectedSet.size && [...correctSet].every(v => selectedSet.has(v));
 
   const optionDivs = document.querySelectorAll('.option');
-  optionDivs.forEach((div, i) => {
+  optionDivs.forEach((div, pos) => {
+    const origI = currentOrder[pos];
     div.classList.add('disabled');
-    if (correctSet.has(i)) div.classList.add('correct');
-    else if (selectedSet.has(i)) div.classList.add('incorrect');
+    if (correctSet.has(origI)) div.classList.add('correct');
+    else if (selectedSet.has(origI)) div.classList.add('incorrect');
   });
 
   if (isCorrect) {

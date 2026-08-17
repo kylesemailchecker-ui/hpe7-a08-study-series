@@ -210,8 +210,8 @@ const LABS = [
   {
     tag: "CREATE AND APPLY AN IP ACL",
     src: "M6 - Mastery §1, 5",
-    scenario: "Create IP ACL \"pc\", add a rule permitting DHCP client-to-server traffic, then apply it inbound on interface 1/1/4.",
-    hint: "The ACL has to exist and have its rules defined before it can be applied to an interface.",
+    scenario: "Create IP ACL \"pc\" with two rules — one permitting DHCP client-to-server traffic, and a second permitting and logging traffic to the 10.0.11.0 network (the PC subnet, for hit-count visibility, not a single host address) — then apply the ACL inbound on interface 1/1/4.",
+    hint: "The ACL has to exist and have both its rules defined before it can be applied to an interface.",
     bank: [
       { id: "a", text: "access-list ip pc" },
       { id: "b", text: "permit udp any eq 68 any eq 67" },
@@ -220,7 +220,7 @@ const LABS = [
       { id: "e", text: "apply access-list ip pc in" },
     ],
     correct: ["a","b","c","d","e"],
-    explain: "The ACL context is entered first and populated with its rules — note that entering eq 68/eq 67 manually auto-normalizes to the named eq dhcp-client/eq dhcp-server in running-config. Only after the ACL has rules is it applied inbound on the interface. show access-list hitcounts ip pc afterward confirms which rule (or the implicit deny) is actually matching traffic."
+    explain: "The ACL context is entered first and populated with its rules — note that entering eq 68/eq 67 manually auto-normalizes to the named eq dhcp-client/eq dhcp-server in running-config. Only after the ACL has rules is it applied inbound on the interface. show access-list hitcounts ip pc afterward confirms which rule (or the implicit deny) is actually matching traffic.\n\n⚠ Source-fidelity note: /255.0.255.0 is reproduced verbatim from the ICX lab guide. It is NOT a valid contiguous subnet mask — AOS-CX does not support wildcard-style masks at all (subnet mask or prefix length only). This is flagged, unresolved, in M6 - Mastery.md (Flag 3) and M6 - Assessment.md (Flag 2 family). Learn the command structure and ordering here; do not copy this literal mask value into a real AOS-CX config — verify the correct subnet mask (255.255.255.0 for a /24) against current documentation."
   },
   {
     tag: "CLASSIFIER POLICY FOR VOICE QoS MARKING",
@@ -238,7 +238,7 @@ const LABS = [
       { id: "h", text: "apply policy access in" },
     ],
     correct: ["a","b","c","d","e","f","g","h"],
-    explain: "The class defines what traffic to match; the policy then references that class and attaches the dscp EF marking action; the policy is applied to the interface last. Remember: unlike an ACL, a classifier policy has no implicit deny — unmatched traffic simply doesn't receive the policy's action, it isn't dropped."
+    explain: "The class defines what traffic to match; the policy then references that class and attaches the dscp EF marking action; the policy is applied to the interface last. Remember: unlike an ACL, a classifier policy has no implicit deny — unmatched traffic simply doesn't receive the policy's action, it isn't dropped.\n\n⚠ Source-fidelity note: /255.0.255.0 is reproduced verbatim from the ICX lab guide and is not a valid contiguous subnet mask on AOS-CX (flagged, unresolved, in M6 - Mastery.md Flag 3). Correct command structure and ordering here; verify the real mask against current AOS-CX documentation before production use."
   },
   {
     tag: "APPLY A CUSTOM QoS SCHEDULE PROFILE",

@@ -240,7 +240,7 @@ const LABS = [
   {
     tag: "CONFIGURE MAC AUTHENTICATION ON A PORT",
     src: "M7 - Mastery §11",
-    scenario: "Enable MAC authentication globally using RADIUS server group \"cppm\", then enable it on interface 1/1/27, which is on VLAN 1.",
+    scenario: "Enable MAC authentication globally using RADIUS server group \"cppm\", then assign interface 1/1/27 to VLAN 1 and enable MAC authentication on that port.",
     hint: "Global MAC-auth setup happens first, then the interface's VLAN membership, then MAC-auth is turned on for that specific interface.",
     bank: [
       { id: "a", text: "aaa authentication port-access mac-auth radius server-group cppm" },
@@ -256,7 +256,7 @@ const LABS = [
   {
     tag: "RADIUS SERVER GROUP FOR 802.1X",
     src: "M7 - Mastery §2",
-    scenario: "Create a RADIUS server group, add a member server to it, then apply that custom group to 802.1X (instead of the default global group).",
+    scenario: "Create a RADIUS server group, add a member server to it, apply that custom group to 802.1X (instead of the default global group), then enable 802.1X.",
     hint: "The group has to exist with at least one member server before 802.1X can be pointed at it by name.",
     bank: [
       { id: "a", text: "aaa group server radius <GROUP-NAME>" },

@@ -271,7 +271,6 @@
 const SUBOBJ = {
   "1a": { label: "Portfolio / product knowledge", modules: "M1" },
   "1b": { label: "Design / requirements scenario", modules: "M2, M3, M4 (design-decision sections)" },
-  "2a": { label: "Central provisioning", modules: "M9" },
   "2b": { label: "Direct CLI config", modules: "M2, M3" },
   "2d": { label: "Layer 2 technologies", modules: "M2" },
   "2e": { label: "Layer 3 routing / overlays", modules: "M3, M4" },
@@ -289,7 +288,7 @@ const SUBOBJ = {
 const GAPS = [
   { code: "2c", label: "Physical config", note: "Zero surplus questions available anywhere in the source material — a pre-existing thin spot, not something this tool measures." },
   { code: "1b", label: "Design / requirements scenario", note: "Only 1 question available (most design-scenario content was already claimed by the Cumulative Practice Exam) — treat any signal here as inconclusive." },
-  { code: "2a", label: "Central provisioning", note: "Only 1 question available (Module 9's Central-API content is mostly consumed by the Cumulative Practice Exam) — treat any signal here as inconclusive." },
+  { code: "2a", label: "Central provisioning", note: "No questions in this pool — the one surplus item (a Postman mock-server question) was removed as low exam-relevance (2026-08-14). Central/REST-API content is still tested under 4c, just not isolated as its own signal here. Review M9 directly if needed." },
 ];
 
 const QUESTIONS = [
@@ -304,13 +303,13 @@ const QUESTIONS = [
 
   { subObj: "1b", src: "M4-Q24", num: "Q3", multi: false,
     text: "Can BGP confederation sub-Autonomous-Systems be assigned private ASNs?",
-    options: ["No — confederation sub-ASes must always use public, IANA-assigned ASNs.", "Yes — and this is also the confirmed exam solution for a newly-integrated branch with an ASN that overlaps an existing branch's range.", "Only if the sub-AS is running eBGP exclusively.", "Private ASNs are only usable inside a VSX pair, not within a confederation."],
+    options: ["No — confederation sub-ASes must always use public, IANA-assigned ASNs.", "Yes — sub-ASes can be assigned private ASNs; this is also useful for integrating a new branch whose ASN overlaps an existing branch's range.", "Only if the sub-AS is running eBGP exclusively.", "Private ASNs are only usable inside a VSX pair, not within a confederation."],
     correct: [1], explain: "Confederation sub-ASes can be assigned private ASNs — also the confirmed solution for integrating a new branch whose ASN overlaps an existing branch's range." },
 
-  { subObj: "2a", src: "M9-Q21", num: "Q4", multi: false,
-    text: "What Postman feature allows front-end developers to begin work before the back end is fully implemented?",
-    options: ["Context switching", "Mock servers, which simulate API responses", "Automated documentation generation", "Collections shared across teams"],
-    correct: [1], explain: "Mock servers are the confirmed Postman feature enabling parallel front-end work." },
+  { subObj: "1a", src: "M1-B7", num: "Q4", multi: false,
+    text: "When does an NAE rule's action actually execute?",
+    options: ["Continuously, every 5 seconds, as long as the condition remains true", "Only when the condition transitions from false to true", "Only when an administrator manually triggers it", "Only during a scheduled maintenance window"],
+    correct: [1], explain: "The action executes only on a false-to-true transition of the condition, not continuously while it remains true." },
 
   { subObj: "2b", src: "M2-Q9", num: "Q5", multi: false,
     text: "What is the default link-up delay timer after a VSX switch reboots, and what is the configurable maximum?",
@@ -367,7 +366,7 @@ const QUESTIONS = [
     correct: [2], explain: "Trust None is the confirmed default QoS trust setting." },
 
   { subObj: "2i", src: "M8-Q2", num: "Q17", multi: false,
-    text: "How does a tunneled-node port's behavior compare to a controlled access point?",
+    text: "A \"controlled\" HPE Aruba Networking access point tunnels its own wireless client traffic to a central controller or gateway instead of forwarding it locally. How does a tunneled-node switch port's behavior compare?",
     options: ["It behaves identically, tunneling 802.11 frames the same way an AP does", "It stops forwarding traffic locally and tunnels 802.3 frames instead, the same general concept as an AP tunneling 802.11 frames", "It only tunnels broadcast and multicast traffic, forwarding unicast locally", "It requires a separate controller from any AP already in use"],
     correct: [1], explain: "Tunneled-node stops local forwarding and tunnels 802.3 frames, conceptually parallel to an AP tunneling 802.11 frames." },
   { subObj: "2i", src: "M1-A11", num: "Q18", multi: false,
@@ -379,10 +378,10 @@ const QUESTIONS = [
     text: "If a RADIUS server sends a VLAN name that doesn't exist on the switch, what happens?",
     options: ["The switch falls back to the port's statically configured VLAN", "Authentication fails outright", "The client is placed in VLAN 1 by default", "The switch creates the VLAN automatically"],
     correct: [1], explain: "Authentication fails outright — there is no fallback to a static VLAN." },
-  { subObj: "3a", src: "M8-Q16", num: "Q20", multi: false,
-    text: "On AOS-CX 10.4, can a gateway (secondary) role be downloaded directly to the Mobility Controller?",
-    options: ["Yes, automatically, the same as any Local User Role", "No — the role must already exist on the controller, or the user must reauthenticate a second time", "Yes, but only over a REST API connection", "No, gateway roles are not supported on AOS-CX at all"],
-    correct: [1], explain: "Confirmed AOS-CX 10.4 limitation — the role must pre-exist on the controller or require a second authentication." },
+  { subObj: "3a", src: "M8-Q24", num: "Q20", multi: false,
+    text: "In UBT 2.0, where is VLAN configuration performed, and what user type is supported?",
+    options: ["On the switch; both tagged and untagged users", "On the gateway; untagged users only", "On the switch; untagged users only", "On the gateway; both tagged and untagged users"],
+    correct: [1], explain: "UBT 2.0 moves VLAN configuration to the AOS-10 gateway and supports only untagged users — UBT 1.0 keeps VLAN configuration on the switch instead." },
 
   { subObj: "3b", src: "M4-Q19", num: "Q21", multi: false,
     text: "After applying a new outbound route-map policy to a BGP neighbor, what must happen for it to take effect?",
@@ -460,6 +459,17 @@ const els = {
   btnRestart: document.getElementById('btn-restart'),
 };
 
+let currentOrder = [];
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function renderQuestion() {
   const q = QUESTIONS[current];
   selected = [];
@@ -476,11 +486,12 @@ function renderQuestion() {
 
   els.options.innerHTML = "";
   const letters = ["A","B","C","D"];
-  q.options.forEach((opt, i) => {
+  currentOrder = shuffle(q.options.map((_, i) => i));
+  currentOrder.forEach((origI, pos) => {
     const div = document.createElement('div');
     div.className = "option";
-    div.innerHTML = `<div class="letter">${letters[i]}</div><div>${opt}</div>`;
-    div.addEventListener('click', () => toggleOption(i, div));
+    div.innerHTML = `<div class="letter">${letters[pos]}</div><div>${q.options[origI]}</div>`;
+    div.addEventListener('click', () => toggleOption(origI, div));
     els.options.appendChild(div);
   });
 
@@ -515,10 +526,11 @@ function submitAnswer() {
   const isCorrect = correctSet.size === selectedSet.size && [...correctSet].every(v => selectedSet.has(v));
 
   const optionDivs = document.querySelectorAll('.option');
-  optionDivs.forEach((div, i) => {
+  optionDivs.forEach((div, pos) => {
+    const origI = currentOrder[pos];
     div.classList.add('disabled');
-    if (correctSet.has(i)) div.classList.add('correct');
-    else if (selectedSet.has(i)) div.classList.add('incorrect');
+    if (correctSet.has(origI)) div.classList.add('correct');
+    else if (selectedSet.has(origI)) div.classList.add('incorrect');
   });
 
   if (isCorrect) {
